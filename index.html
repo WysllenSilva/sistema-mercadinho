@@ -161,21 +161,24 @@
         // --- CONFIGURAÇÕES DO SUPABASE ---
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        let supabase;
 
-        // Inicializa o cliente Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (erro) {
+            console.error("Erro ao inicializar o Supabase:", erro);
+        }
 
-        // --- LÓGICA DO TECLADO ---
+        // --- 2. LÓGICA DA INTERFACE (Teclado) ---
         let pinDigitado = "";
         const displayElement = document.getElementById('display-pin');
 
         function atualizarVisor() {
-            // Converte os números em asteriscos para privacidade e clareza
             displayElement.textContent = "*".repeat(pinDigitado.length);
         }
 
         function addNumero(num) {
-            if (pinDigitado.length < 8) { // Limite de 8 dígitos para segurança
+            if (pinDigitado.length < 8) { 
                 pinDigitado += num;
                 atualizarVisor();
             }
@@ -186,10 +189,15 @@
             atualizarVisor();
         }
 
-        // --- LÓGICA DE LOGIN ---
+        // --- 3. LÓGICA DE LOGIN ---
         async function validarAcesso() {
             if (pinDigitado === "") {
                 alert("Por favor, digite a senha.");
+                return;
+            }
+
+            if (!supabase) {
+                alert("Erro crítico: Banco de dados inoperante. Desative bloqueadores de anúncio e recarregue a página.");
                 return;
             }
 
@@ -197,28 +205,26 @@
             loginBox.classList.add('loading');
 
             try {
-                // Busca na tabela 'usuarios' onde 'pin_senha' é igual ao digitado
                 const { data, error } = await supabase
                     .from('usuarios')
                     .select('nome')
                     .eq('pin_senha', pinDigitado)
-                    .single(); // Esperamos apenas um usuário por PIN
+                    .single();
 
                 if (error || !data) {
                     alert("SENHA INCORRETA!");
                     limpar();
                 } else {
                     alert("ACESSO LIBERADO!\nBem-vindo(a), " + data.nome);
-                    // Aqui você redirecionaria para a tela principal do PDV
-                    // window.location.href = "pdv.html";
                 }
             } catch (err) {
-                console.error("Erro na conexão:", err);
-                alert("Erro ao conectar ao sistema.");
+                console.error("Erro de conexão:", err);
+                alert("Falha na comunicação com o sistema.");
             } finally {
                 loginBox.classList.remove('loading');
             }
         }
+        
     </script>
 </body>
 </html>
