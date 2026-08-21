@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDV - Acesso ao Sistema</title>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Estilização focada em Acessibilidade e Alto Contraste */
+        :root {
+            --cor-fundo: #FFFFFF;
+            --cor-texto: #000000;
+            --cor-botao: #F0F0F0;
+            --cor-sucesso: #28a745;
+            --cor-perigo: #dc3545;
+            --fonte-tamanho-base: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #E5E5E5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--cor-texto);
+        }
+
+        .login-container {
+            background-color: var(--cor-fundo);
+            width: 95%;
+            max-width: 450px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        p {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Visor da Senha */
+        #display-pin {
+            width: 100%;
+            height: 80px;
+            font-size: 3rem;
+            text-align: center;
+            letter-spacing: 15px;
+            border: 4px solid var(--cor-texto);
+            border-radius: 10px;
+            margin-bottom: 25px;
+            background: #FFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Teclado Numérico */
+        .teclado {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .btn-tecla {
+            height: 90px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            background-color: var(--cor-botao);
+            border: 3px solid var(--cor-texto);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .btn-tecla:active {
+            background-color: #CCCCCC;
+        }
+
+        .btn-limpar {
+            background-color: #FFD700; /* Amarelo de atenção */
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .btn-entrar {
+            background-color: var(--cor-sucesso);
+            color: white;
+            grid-column: span 2;
+            font-size: 1.8rem;
+            text-transform: uppercase;
+        }
+
+        .btn-entrar:active {
+            background-color: #1e7e34;
+        }
+
+        /* Feedback de carregamento */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container" id="login-box">
+        <h1>MERCADINHO</h1>
+        <p>DIGITE SUA SENHA (PIN):</p>
+
+        <!-- Campo visual de asteriscos -->
+        <div id="display-pin"></div>
+
+        <!-- Teclado Numérico Virtual -->
+        <div class="teclado">
+            <button class="btn-tecla" onclick="addNumero('1')">1</button>
+            <button class="btn-tecla" onclick="addNumero('2')">2</button>
+            <button class="btn-tecla" onclick="addNumero('3')">3</button>
+            
+            <button class="btn-tecla" onclick="addNumero('4')">4</button>
+            <button class="btn-tecla" onclick="addNumero('5')">5</button>
+            <button class="btn-tecla" onclick="addNumero('6')">6</button>
+            
+            <button class="btn-tecla" onclick="addNumero('7')">7</button>
+            <button class="btn-tecla" onclick="addNumero('8')">8</button>
+            <button class="btn-tecla" onclick="addNumero('9')">9</button>
+            
+            <button class="btn-tecla btn-limpar" onclick="limpar()">LIMPAR</button>
+            <button class="btn-tecla" onclick="addNumero('0')">0</button>
+            <span></span> <!-- Espaçador se necessário -->
+            
+            <button class="btn-tecla btn-entrar" onclick="validarAcesso()">ENTRAR</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÕES DO SUPABASE ---
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+
+        // Inicializa o cliente Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- LÓGICA DO TECLADO ---
+        let pinDigitado = "";
+        const displayElement = document.getElementById('display-pin');
+
+        function atualizarVisor() {
+            // Converte os números em asteriscos para privacidade e clareza
+            displayElement.textContent = "*".repeat(pinDigitado.length);
+        }
+
+        function addNumero(num) {
+            if (pinDigitado.length < 8) { // Limite de 8 dígitos para segurança
+                pinDigitado += num;
+                atualizarVisor();
+            }
+        }
+
+        function limpar() {
+            pinDigitado = "";
+            atualizarVisor();
+        }
+
+        // --- LÓGICA DE LOGIN ---
+        async function validarAcesso() {
+            if (pinDigitado === "") {
+                alert("Por favor, digite a senha.");
+                return;
+            }
+
+            const loginBox = document.getElementById('login-box');
+            loginBox.classList.add('loading');
+
+            try {
+                // Busca na tabela 'usuarios' onde 'pin_senha' é igual ao digitado
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('nome')
+                    .eq('pin_senha', pinDigitado)
+                    .single(); // Esperamos apenas um usuário por PIN
+
+                if (error || !data) {
+                    alert("SENHA INCORRETA!");
+                    limpar();
+                } else {
+                    alert("ACESSO LIBERADO!\nBem-vindo(a), " + data.nome);
+                    // Aqui você redirecionaria para a tela principal do PDV
+                    // window.location.href = "pdv.html";
+                }
+            } catch (err) {
+                console.error("Erro na conexão:", err);
+                alert("Erro ao conectar ao sistema.");
+            } finally {
+                loginBox.classList.remove('loading');
+            }
+        }
+    </script>
+</body>
+</html>
