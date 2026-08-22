@@ -211,7 +211,7 @@
 
             const product = dbProducts.find(p => 
                 p.codigo_barras === query || 
-                p.nome.toLowerCase().includes(query)
+                p.nome_produto.toLowerCase().includes(query)
             );
 
             if (product) {
@@ -231,7 +231,7 @@
             } else {
                 cart.push({
                     id: product.id,
-                    nome: product.nome,
+                    nome: product.nome_produto,
                     preco: product.preco_venda || product.preco,
                     quantidade: 1
                 });
