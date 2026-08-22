@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Histórico de Vendas - Mercadinho</title>
+    
+    <!-- Supabase e SweetAlert2 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb; 
+            --success: #16a34a; 
+            --danger: #dc2626;
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --white: #ffffff;
+            --muted: #64748b;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        
+        header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+        .btn-voltar { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; color: var(--text); text-decoration: none;}
+        .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        main { flex: 1; overflow-y: auto; padding: 15px; }
+        
+        .loading { text-align: center; padding: 40px; color: var(--muted); font-weight: 600; }
+        .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+        
+        /* Cartão de Venda */
+        .venda-card { 
+            background: var(--white); 
+            border-radius: 12px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            border-left: 5px solid var(--primary);
+        }
+        
+        .venda-header { display: flex; justify-content: space-between; align-items: center; }
+        .venda-data { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
+        .badge-pgto { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
+        
+        .pgto-PIX { background: #dcfce7; color: #166534; }
+        .pgto-DINHEIRO { background: #fef9c3; color: #854d0e; }
+        .pgto-CARTÃO { background: #dbeafe; color: #1e40af; }
+        
+        .venda-body { display: flex; justify-content: space-between; align-items: flex-end; }
+        .venda-total { font-size: 1.5rem; font-weight: 900; color: var(--text); }
+        
+        .btn-detalhes { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+        }
+        .btn-detalhes:active { transform: scale(0.95); }
+
+        /* Estilos do Recibo (SweetAlert) */
+        .recibo-container { text-align: left; font-size: 0.95rem; }
+        .recibo-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding: 8px 0; }
+        .recibo-item:last-child { border-bottom: none; }
+        .recibo-nome { font-weight: 600; color: var(--text); }
+        .recibo-sub { font-size: 0.85rem; color: var(--muted); }
+        .recibo-valor { font-weight: 800; }
+        .swal2-popup { border-radius: 15px !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="menu.html" class="btn-voltar">⬅️</a>
+        <span class="titulo-topo">Histórico de Vendas</span>
+        <div style="width: 45px;"></div>
+    </header>
+
+    <main id="lista-vendas">
+        <div class="loading">Carregando histórico...</div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Variável global para guardar as vendas carregadas e não precisar ir no banco toda hora
+        let vendasCarregadas = [];
+
+        async function carregarHistorico() {
+            try {
+                // A MÁGICA DA ARQUITETURA RELACIONAL:
+                // Trazemos a Venda + Os Itens da Venda + O Nome do Produto de uma vez só!
+                const { data, error } = await tabela_supabase
+                    .from('vendas')
+                    .select(`
+                        id, 
+                        valor_total, 
+                        forma_pagamento, 
+                        data_venda,
+                        itens_venda (
+                            quantidade,
+                            preco_unitario,
+                            produtos ( nome_produto )
+                        )
+                    `)
+                    .order('data_venda', { ascending: false }) // Mais recentes primeiro
+                    .limit(50); // Puxa as últimas 50 vendas para o celular não travar
+
+                if (error) throw error;
+
+                vendasCarregadas = data;
+                renderizarVendas();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('lista-vendas').innerHTML = `<div class="empty-state">Erro ao carregar histórico.</div>`;
+            }
+        }
+
+        function renderizarVendas() {
+            const container = document.getElementById('lista-vendas');
+            
+            if (vendasCarregadas.length === 0) {
+                container.innerHTML = `<div class="empty-state">Nenhuma venda registrada ainda.</div>`;
+                return;
+            }
+
+            container.innerHTML = vendasCarregadas.map((venda, index) => {
+                // Formata Data e Hora (DD/MM/YYYY HH:MM)
+                const dataObj = new Date(venda.data_venda);
+                const dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' às ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                
+                // Formata Moeda
+                const valorFormatado = "R$ " + venda.valor_total.toFixed(2).replace('.', ',');
+                
+                // Pega a classe da cor do pagamento
+                const classePgto = `pgto-${venda.forma_pagamento.toUpperCase()}`;
+
+                return `
+                    <div class="venda-card">
+                        <div class="venda-header">
+                            <span class="venda-data">${dataFormatada}</span>
+                            <span class="badge-pgto ${classePgto}">${venda.forma_pagamento}</span>
+                        </div>
+                        <div class="venda-body">
+                            <span class="venda-total">${valorFormatado}</span>
+                            <button class="btn-detalhes" onclick="abrirDetalhes(${index})">🛒 Ver Itens</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function abrirDetalhes(index) {
+            const venda = vendasCarregadas[index];
+            const itens = venda.itens_venda;
+            
+            // Monta o HTML do recibo
+            let reciboHTML = `<div class="recibo-container">`;
+            
+            itens.forEach(item => {
+                const nome = item.produtos ? item.produtos.nome_produto : 'Produto Excluído';
+                const subtotal = item.quantidade * item.preco_unitario;
+                
+                reciboHTML += `
+                    <div class="recibo-item">
+                        <div>
+                            <div class="recibo-nome">${nome}</div>
+                            <div class="recibo-sub">${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div>
+                        </div>
+                        <div class="recibo-valor">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                `;
+            });
+            
+            reciboHTML += `</div>`;
+
+            // Exibe o pop-up
+            Swal.fire({
+                title: 'Detalhes da Venda',
+                html: reciboHTML,
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#475569',
+                width: '90%'
+            });
+        }
+
+        // Inicia o carregamento assim que a tela abre
+        carregarHistorico();
+    </script>
+</body>
+</html>
