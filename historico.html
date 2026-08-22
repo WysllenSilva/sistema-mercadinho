@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Histórico de Vendas - Mercadinho</title>
     
-    <!-- Supabase e SweetAlert2 -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -31,6 +30,39 @@
         
         main { flex: 1; overflow-y: auto; padding: 15px; }
         
+        /* Barra de Filtro de Datas */
+        .filter-container {
+            background: var(--white);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+        .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+        .filter-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Inter'; outline: none; }
+        .filter-group input:focus { border-color: var(--primary); }
+        
+        .btn-filtrar { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-filtrar:active { transform: scale(0.95); }
+
         .loading { text-align: center; padding: 40px; color: var(--muted); font-weight: 600; }
         .empty-state { text-align: center; padding: 40px; color: var(--muted); }
         
@@ -87,8 +119,23 @@
         <div style="width: 45px;"></div>
     </header>
 
-    <main id="lista-vendas">
-        <div class="loading">Carregando histórico...</div>
+    <main>
+        <!-- Barra de Filtros -->
+        <div class="filter-container">
+            <div class="filter-group">
+                <label>Data Inicial</label>
+                <input type="date" id="data_inicio">
+            </div>
+            <div class="filter-group">
+                <label>Data Final</label>
+                <input type="date" id="data_fim">
+            </div>
+            <button class="btn-filtrar" onclick="carregarHistorico()">🔍 Filtrar</button>
+        </div>
+
+        <div id="lista-vendas">
+            <div class="loading">Carregando histórico...</div>
+        </div>
     </main>
 
     <script>
@@ -96,13 +143,42 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variável global para guardar as vendas carregadas e não precisar ir no banco toda hora
         let vendasCarregadas = [];
+
+        // Preenche os inputs de data automaticamente (Hoje e 7 dias atrás)
+        function inicializarFiltros() {
+            const hoje = new Date();
+            const seteDiasAtras = new Date();
+            seteDiasAtras.setDate(hoje.getDate() - 7);
+
+            // Converte para o formato YYYY-MM-DD exigido pelo input HTML
+            const formataData = (data) => {
+                const ano = data.getFullYear();
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const dia = String(data.getDate()).padStart(2, '0');
+                return `${ano}-${mes}-${dia}`;
+            };
+
+            document.getElementById('data_inicio').value = formataData(seteDiasAtras);
+            document.getElementById('data_fim').value = formataData(hoje);
+        }
 
         async function carregarHistorico() {
             try {
-                // A MÁGICA DA ARQUITETURA RELACIONAL:
-                // Trazemos a Venda + Os Itens da Venda + O Nome do Produto de uma vez só!
+                document.getElementById('lista-vendas').innerHTML = `<div class="loading">Buscando vendas...</div>`;
+
+                const strInicio = document.getElementById('data_inicio').value;
+                const strFim = document.getElementById('data_fim').value;
+
+                if (!strInicio || !strFim) {
+                    Swal.fire('Atenção', 'Preencha as duas datas!', 'warning');
+                    return;
+                }
+
+                // Ajusta as datas para o fuso horário local e cobre das 00:00 até 23:59
+                const start = new Date(`${strInicio}T00:00:00`).toISOString();
+                const end = new Date(`${strFim}T23:59:59`).toISOString();
+
                 const { data, error } = await tabela_supabase
                     .from('vendas')
                     .select(`
@@ -116,8 +192,9 @@
                             produtos ( nome_produto )
                         )
                     `)
-                    .order('data_venda', { ascending: false }) // Mais recentes primeiro
-                    .limit(50); // Puxa as últimas 50 vendas para o celular não travar
+                    .gte('data_venda', start) // Maior ou igual a Data Inicial
+                    .lte('data_venda', end)   // Menor ou igual a Data Final
+                    .order('data_venda', { ascending: false }); 
 
                 if (error) throw error;
 
@@ -134,19 +211,14 @@
             const container = document.getElementById('lista-vendas');
             
             if (vendasCarregadas.length === 0) {
-                container.innerHTML = `<div class="empty-state">Nenhuma venda registrada ainda.</div>`;
+                container.innerHTML = `<div class="empty-state">Nenhuma venda encontrada neste período.</div>`;
                 return;
             }
 
             container.innerHTML = vendasCarregadas.map((venda, index) => {
-                // Formata Data e Hora (DD/MM/YYYY HH:MM)
                 const dataObj = new Date(venda.data_venda);
                 const dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' às ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                
-                // Formata Moeda
                 const valorFormatado = "R$ " + venda.valor_total.toFixed(2).replace('.', ',');
-                
-                // Pega a classe da cor do pagamento
                 const classePgto = `pgto-${venda.forma_pagamento.toUpperCase()}`;
 
                 return `
@@ -164,11 +236,11 @@
             }).join('');
         }
 
-        function abrirDetalhes(index) {
+        // Função tornada Global (window) para garantir que funcione no PC sem erros de escopo
+        window.abrirDetalhes = function(index) {
             const venda = vendasCarregadas[index];
             const itens = venda.itens_venda;
             
-            // Monta o HTML do recibo
             let reciboHTML = `<div class="recibo-container">`;
             
             itens.forEach(item => {
@@ -188,17 +260,20 @@
             
             reciboHTML += `</div>`;
 
-            // Exibe o pop-up
+            // Largura inteligente: Se for PC (tela > 600px), fixa em 400px. Se for celular, usa 90%.
+            const larguraPopup = window.innerWidth > 600 ? '400px' : '90%';
+
             Swal.fire({
                 title: 'Detalhes da Venda',
                 html: reciboHTML,
                 confirmButtonText: 'Fechar',
                 confirmButtonColor: '#475569',
-                width: '90%'
+                width: larguraPopup
             });
-        }
+        };
 
-        // Inicia o carregamento assim que a tela abre
+        // Roda ao carregar a página
+        inicializarFiltros();
         carregarHistorico();
     </script>
 </body>
