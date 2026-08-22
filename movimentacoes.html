@@ -26,8 +26,8 @@
         
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
-        input { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
-        input:focus { border-color: var(--primary); }
+        input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; background: var(--white); }
+        input:focus, select:focus { border-color: var(--primary); }
         input[readonly] { background-color: #f1f5f9; color: #64748b; font-weight: bold; }
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -79,6 +79,17 @@
                 <input type="date" id="data_vencimento">
             </div>
 
+            <!-- MENU SUSPENSO (DROPDOWN) DE MOTIVOS -->
+            <div class="form-group">
+                <label>Motivo da Entrada</label>
+                <select id="motivo">
+                    <option value="Abastecimento (Compra)">Abastecimento (Compra)</option>
+                    <option value="Devolução de Cliente">Devolução de Cliente</option>
+                    <option value="Troca de Fornecedor">Troca de Fornecedor</option>
+                    <option value="Ajuste Manual de Saldo">Ajuste Manual de Saldo</option>
+                </select>
+            </div>
+
             <button class="btn-save" onclick="salvarEntrada()">📦 CONFIRMAR ENTRADA</button>
         </div>
     </main>
@@ -107,11 +118,11 @@
                 if (data) {
                     document.getElementById('nome_produto').value = data.nome_produto;
                     produtoSelecionadoId = data.id;
-                    document.getElementById('quantidade').focus(); // Pula pro próximo campo
+                    document.getElementById('quantidade').focus(); 
                 } else {
                     document.getElementById('nome_produto').value = "";
                     document.getElementById('codigo_barras').value = "";
-                    Swal.fire('Não Cadastrado', 'Este produto não existe. Vá em "Produtos" e cadastre-o primeiro!', 'warning');
+                    Swal.fire('Não Cadastrado', 'Este produto não existe. Vá no Cadastro e registre-o primeiro!', 'warning');
                 }
             } catch (err) {
                 console.error(err);
@@ -157,6 +168,7 @@
             const qtd = parseInt(document.getElementById('quantidade').value);
             const dataVenc = document.getElementById('data_vencimento').value;
             const lote = document.getElementById('lote').value.trim() || 'SEM LOTE';
+            const motivoEntrada = document.getElementById('motivo').value; // Captura a escolha do select
 
             if (!qtd || qtd <= 0 || !dataVenc) {
                 return Swal.fire('Atenção', 'Preencha a quantidade e a data de vencimento!', 'warning');
@@ -182,7 +194,7 @@
                         produto_id: produtoSelecionadoId, 
                         tipo: 'ENTRADA', 
                         quantidade: qtd, 
-                        motivo: 'Entrada manual de estoque' 
+                        motivo: motivoEntrada 
                     }]);
 
                 if (erroMovimentacao) throw erroMovimentacao;
@@ -196,6 +208,7 @@
                 document.getElementById('quantidade').value = "";
                 document.getElementById('lote').value = "";
                 document.getElementById('data_vencimento').value = "";
+                document.getElementById('motivo').selectedIndex = 0; // Volta para 'Abastecimento'
 
             } catch (err) {
                 Swal.fire('Erro', 'Falha ao registrar entrada: ' + err.message, 'error');
