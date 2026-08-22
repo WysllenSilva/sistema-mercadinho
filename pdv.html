@@ -32,59 +32,74 @@
             overflow: hidden;
         }
 
-        /* Topo: Busca e Câmera */
+        /* Topo Organizado */
         header {
             background: var(--white);
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 12px 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             z-index: 10;
         }
 
-        .header-top {
+        .top-bar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             margin-bottom: 10px;
         }
 
         .btn-voltar {
             background: #e2e8f0;
             border: none;
-            padding: 8px 15px;
+            padding: 8px 14px;
             border-radius: 8px;
             font-weight: bold;
+            font-size: 0.9rem;
             cursor: pointer;
+            color: #334155;
         }
 
+        .titulo-topo {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--text);
+            letter-spacing: 0.5px;
+        }
+
+        /* Linha de Busca e Ações unificada */
         .search-container {
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            align-items: center;
         }
 
         input#search-input {
             flex: 1;
-            padding: 15px;
-            font-size: 1.2rem;
+            padding: 12px 10px;
+            font-size: 1.1rem;
             border: 2px solid #cbd5e1;
             border-radius: 8px;
             outline: none;
         }
 
-        .btn-search {
-            padding: 0 20px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            background: var(--primary);
+        input#search-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-camera {
+            padding: 12px 16px;
+            font-size: 1.3rem;
+            background: #334155;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
         }
 
-        .btn-camera {
-            padding: 0 15px;
-            font-size: 1.5rem;
-            background: #475569;
+        .btn-search {
+            padding: 12px 18px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
@@ -185,25 +200,27 @@
         .empty-cart { text-align: center; margin-top: 50px; color: #94a3b8; font-size: 1.2rem; }
         .btn-pay:active, .btn-search:active, .btn-camera:active { transform: scale(0.95); }
 
-        /* Estilo Customizado SweetAlert2 */
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="header-top">
+        <!-- Linha Superior com Botão Voltar e Título Alinhado -->
+        <div class="top-bar">
             <button class="btn-voltar" onclick="window.location.href='menu.html'">⬅️ Voltar</button>
-            <span style="font-weight: bold; font-size: 1.2rem;">FRENTE DE CAIXA</span>
-            <div style="width: 70px;"></div> <!-- Espaçador para centralizar título -->
+            <span class="titulo-topo">FRENTE DE CAIXA</span>
+            <div style="width: 70px;"></div> <!-- Mantém o equilíbrio visual centralizado -->
         </div>
 
+        <!-- Linha de Operação: Câmera + Input + Buscar -->
         <div class="search-container">
+            <button class="btn-camera" id="btn-toggle-scan" onclick="toggleScanner()" title="Escanear com Câmera">📸</button>
             <input type="text" id="search-input" placeholder="Cód. Barras ou Nome" autocomplete="off">
-            <button class="btn-camera" id="btn-toggle-scan" onclick="toggleScanner()">📸</button>
-            <button class="btn-search" onclick="searchProduct()">OK</button>
+            <button class="btn-search" onclick="searchProduct()">BUSCAR</button>
         </div>
 
+        <!-- Leitor de Câmera Oculto/Visível -->
         <div id="reader-container">
             <div id="reader"></div>
         </div>
@@ -232,12 +249,10 @@
 
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ESTADO DA APLICAÇÃO
         let dbProducts = [];
         let cart = [];
         let html5QrCode;
 
-        // INICIALIZAÇÃO
         async function loadApp() {
             const { data, error } = await tabela_supabase.from('produtos').select('*');
             if (error) {
@@ -248,7 +263,6 @@
             }
         }
 
-        // --- LÓGICA DO SCANNER (CÂMERA) ---
         function toggleScanner() {
             const container = document.getElementById('reader-container');
             if (container.style.display === 'block') {
@@ -264,7 +278,7 @@
             
             html5QrCode = new Html5Qrcode("reader");
             container.style.display = 'block';
-            btnCam.style.backgroundColor = '#ef4444'; // Fica vermelho para indicar que está gravando
+            btnCam.style.backgroundColor = '#ef4444';
             btnCam.innerText = "🛑";
 
             try {
@@ -272,11 +286,10 @@
                     { facingMode: "environment" }, 
                     { fps: 10, qrbox: { width: 250, height: 150 } },
                     (decodedText) => {
-                        // Quando ler um código:
-                        if (navigator.vibrate) navigator.vibrate(100); // Vibra
-                        document.getElementById('search-input').value = decodedText; // Preenche
-                        stopScanner(); // Fecha câmera
-                        searchProduct(); // Busca e adiciona direto no carrinho!
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        document.getElementById('search-input').value = decodedText;
+                        stopScanner();
+                        searchProduct();
                     },
                     (errorMessage) => { }
                 );
@@ -293,17 +306,15 @@
             }
             document.getElementById('reader-container').style.display = 'none';
             const btnCam = document.getElementById('btn-toggle-scan');
-            btnCam.style.backgroundColor = '#475569';
+            btnCam.style.backgroundColor = '#334155';
             btnCam.innerText = "📸";
         }
 
-        // --- BUSCA E CARRINHO ---
         function searchProduct() {
             const input = document.getElementById('search-input');
             const query = input.value.toLowerCase().trim();
             if (!query) return;
 
-            // Busca produto (Usa nome_produto conforme corrigido)
             const product = dbProducts.find(p => 
                 p.codigo_barras === query || 
                 (p.nome_produto && p.nome_produto.toLowerCase().includes(query))
@@ -331,7 +342,7 @@
             } else {
                 cart.push({
                     id: product.id,
-                    nome: product.nome_produto, // Correção aplicada aqui também
+                    nome: product.nome_produto,
                     preco: product.preco_venda || 0,
                     quantidade: 1
                 });
@@ -376,7 +387,6 @@
             totalDisplay.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
         }
 
-        // --- FINALIZAÇÃO ---
         async function finishSale(method) {
             if (cart.length === 0) {
                 Swal.fire('Vazio', 'Adicione produtos antes de finalizar.', 'info');
@@ -386,7 +396,6 @@
             const totalVenda = cart.reduce((acc, item) => acc + ((item.preco || 0) * item.quantidade), 0);
 
             try {
-                // 1. Salva Venda
                 const { data: vendaData, error: vendaError } = await tabela_supabase
                     .from('vendas')
                     .insert([{ valor_total: totalVenda, forma_pagamento: method }])
@@ -396,7 +405,6 @@
 
                 const vendaId = vendaData[0].id;
 
-                // 2. Salva Itens
                 const itensParaInserir = cart.map(item => ({
                     venda_id: vendaId,
                     produto_id: item.id,
@@ -407,7 +415,6 @@
                 const { error: itensError } = await tabela_supabase.from('itens_venda').insert(itensParaInserir);
                 if (itensError) throw itensError;
 
-                // Sucesso com pop-up bonito que fecha sozinho!
                 Swal.fire({
                     title: 'Venda Concluída!',
                     text: 'Forma: ' + method,
@@ -425,7 +432,6 @@
             }
         }
 
-        // Enter no teclado busca
         document.getElementById('search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchProduct();
         });
