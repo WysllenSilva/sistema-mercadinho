@@ -4,92 +4,166 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Menu Principal - Mercadinho</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --primary: #2563eb;
-            --success: #16a34a;
+            --primary: #2563eb; 
+            --success: #16a34a; 
             --danger: #dc2626;
-            --bg: #f8fafc;
-            --text: #0f172a;
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --white: #ffffff;
+            --gray-light: #e2e8f0; 
+            --gray-dark: #475569;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh; 
+            padding: 20px; 
+            align-items: center; 
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            min-height: 100vh;
+        .app-title { 
+            font-size: 1.8rem; 
+            font-weight: 800; 
+            text-align: center; 
+            margin-bottom: 25px; 
+            margin-top: 10px; 
+            color: var(--text); 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
         }
 
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 40px;
-            margin-top: 20px;
-            color: var(--text);
-            text-transform: uppercase;
+        .menu-container { 
+            width: 100%; 
+            max-width: 500px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            flex: 1; 
         }
 
-        .menu-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 100%;
-            max-width: 400px;
+        /* Grade para 2 colunas */
+        .grid-2 { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
         }
 
-        .btn-menu {
-            width: 100%;
-            padding: 30px 20px;
-            border: none;
-            border-radius: 15px;
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            text-transform: uppercase;
+        /* Estilo base dos botões */
+        .btn-menu { 
+            border: none; 
+            border-radius: 12px; 
+            padding: 20px 10px; 
+            font-size: 1.05rem; 
+            font-weight: 800; 
+            cursor: pointer; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            transition: transform 0.1s; 
+            text-decoration: none; 
+            color: white; 
+        }
+        
+        .btn-menu:active { transform: scale(0.96); }
+        .btn-menu i { font-size: 1.8rem; font-style: normal; }
+
+        /* Cores Específicas dos Botões */
+        .btn-vender { background-color: var(--success); }
+        .btn-historico { background-color: var(--gray-light); color: var(--text); }
+        .btn-acao { background-color: var(--primary); } /* Produtos, Estoque, Prateleira */
+
+        /* Linha Divisória Suave */
+        .divider { 
+            height: 2px; 
+            background-color: #cbd5e1; 
+            margin: 5px 0; 
+            border-radius: 2px; 
         }
 
-        .btn-pdv { background-color: var(--primary); }
-        .btn-cad { background-color: var(--success); }
-        .btn-est { background-color: var(--success); }
-        .btn-sair { background-color: var(--danger); margin-top: 40px; }
+        /* Botão Sair no Rodapé */
+        .footer-action { 
+            margin-top: auto; 
+            display: flex; 
+            justify-content: center; 
+            padding-top: 30px; 
+        }
+        
+        .btn-sair { 
+            background-color: var(--danger); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            padding: 12px 25px; 
+            font-size: 1rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        
+        .btn-sair:active { transform: scale(0.96); }
 
-        .btn-menu:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-    <h1>MERCADINHO</h1>
+    <h1 class="app-title">MERCADINHO</h1>
 
-    <div class="menu-grid">
-        
-        <button class="btn-menu btn-pdv" onclick="window.location.href='vendas.html'">
-            🛒 Vender (PDV)
-        </button>
-        
-        <button class="btn-menu btn-cad" onclick="window.location.href='produtos.html'">
-            📦 Cadastro de Produto
-        </button>
+    <div class="menu-container">
+        <!-- BLOCO 1: OPERAÇÃO (Frente de Loja) -->
+        <div class="grid-2">
+            <a href="vendas.html" class="btn-menu btn-vender">
+                <i>🛒</i>
+                VENDER
+            </a>
+            <a href="historico.html" class="btn-menu btn-historico">
+                <i>📄</i>
+                HISTÓRICO
+            </a>
+        </div>
 
-        <button class="btn-menu btn-est" onclick="window.location.href='prateleira.html'">
-            📦 Estoque
-        </button>
+        <!-- SEPARADOR -->
+        <div class="divider"></div>
 
-        <button class="btn-menu btn-est" onclick="window.location.href='movimentacoes.html'">
-            📦 Abastecimento de produtos
-        </button>
+        <!-- BLOCO 2: GESTÃO (Retaguarda) -->
+        <div class="grid-2">
+            <a href="produtos.html" class="btn-menu btn-acao">
+                <i>📦</i>
+                PRODUTOS
+            </a>
+            <a href="movimentacoes.html" class="btn-menu btn-acao">
+                <i>📥</i>
+                GESTÃO DO ESTOQUE
+            </a>
+            <a href="prateleira.html" class="btn-menu btn-acao">
+                <i>🏷️</i>
+                PRATELEIRA
+            </a>
+            <!-- Espaço vazio na grid para manter o alinhamento da esquerda -->
+            <div></div> 
+        </div>
+    </div>
 
-        <button class="btn-menu btn-sair" onclick="window.location.href='index.html'">
-            🚪 Sair
+    <!-- RODAPÉ -->
+    <div class="footer-action">
+        <button class="btn-sair" onclick="window.location.href='index.html'">
+            ❌ SAIR
         </button>
     </div>
 
