@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estoque - Mercadinho</title>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb; --danger: #ef4444; --warning: #f59e0b;
+            --success: #10b981; --bg: #f8fafc; --white: #ffffff;
+            --text-main: #1e293b; --text-muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); padding-bottom: 20px; }
+        
+        header { background: var(--primary); color: white; padding: 1rem; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-back { text-decoration: none; color: white; font-size: 1.2rem; margin-right: 1rem; }
+        h1 { font-size: 1.1rem; font-weight: 600; }
+        
+        .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 56px; z-index: 99; }
+        .tab-btn { flex: 1; padding: 1rem; border: none; background: none; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        .content-section { display: none; padding: 1rem; }
+        .content-section.active { display: block; }
+        
+        .card { background: var(--white); border-radius: 8px; padding: 15px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .card-left { display: flex; flex-direction: column; gap: 4px; }
+        .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        
+        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+        .status-vencido { background: #fee2e2; color: var(--danger); border: 1px solid var(--danger); }
+        .status-alerta { background: #fef3c7; color: var(--warning); border: 1px solid var(--warning); }
+        .status-ok { background: #dcfce7; color: var(--success); border: 1px solid var(--success); }
+        
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="menu.html" class="btn-back">⬅️</a>
+        <h1>Estoque e Validades</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('estoque', this)">SALDO ATUAL</button>
+        <button class="tab-btn" onclick="switchTab('validades', this)">LOTES / VALIDADE</button>
+    </div>
+
+    <section id="estoque" class="content-section active">
+        <div id="list-estoque"><div class="empty-state">Carregando saldo...</div></div>
+    </section>
+
+    <section id="validades" class="content-section">
+        <div id="list-validades"><div class="empty-state">Carregando validades...</div></div>
+    </section>
+
+    <script>
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- ABA 1: SALDO DE ESTOQUE ---
+        async function fetchEstoque() {
+            // Faz um JOIN poderoso: Traz os produtos e as quantidades deles que estão na prateleira
+            const { data, error } = await tabela_supabase
+                .from('produtos')
+                .select(`
+                    nome_produto, 
+                    estoque_minimo,
+                    prateleira_fisica ( quantidade )
+                `)
+                .order('nome_produto', { ascending: true });
+
+            if (error) return Swal.fire('Erro', error.message, 'error');
+            
+            if (!data || data.length === 0) {
+                document.getElementById('list-estoque').innerHTML = '<div class="empty-state">Nenhum produto cadastrado no sistema.</div>';
+                return;
+            }
+
+            document.getElementById('list-estoque').innerHTML = data.map(item => {
+                // Calcula o saldo total somando todas as quantidades dos lotes deste produto
+                const saldoTotal = item.prateleira_fisica.reduce((acc, lote) => acc + lote.quantidade, 0);
+                const minimo = item.estoque_minimo || 5; // Se não tiver mínimo configurado, assume 5
+                
+                const statusClass = saldoTotal <= minimo ? 'status-vencido' : 'status-ok';
+                const statusTexto = saldoTotal <= minimo ? 'Estoque Baixo' : 'Estoque OK';
+
+                return `
+                    <div class="card">
+                        <div class="card-left">
+                            <h3 style="font-size: 1.1rem; font-weight: 700;">${item.nome_produto}</h3>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">Mínimo ideal: ${minimo} un</span>
+                        </div>
+                        <div class="card-right">
+                            <span style="font-size: 1.4rem; font-weight: 900;">${saldoTotal} un</span>
+                            <div class="badge ${statusClass}">${statusTexto}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- ABA 2: LOTES E VALIDADES ---
+        async function fetchValidades() {
+            // Busca a prateleira e cruza com os produtos para pegar o nome
+            const { data, error } = await tabela_supabase
+                .from('prateleira_fisica')
+                .select(`
+                    lote, quantidade, data_vencimento, 
+                    produtos ( nome_produto )
+                `)
+                .order('data_vencimento', { ascending: true });
+
+            if (error) return Swal.fire('Erro', error.message, 'error');
+
+            if (!data || data.length === 0) {
+                document.getElementById('list-validades').innerHTML = '<div class="empty-state">A prateleira está vazia. Nenhuma mercadoria deu entrada ainda.</div>';
+                return;
+            }
+
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+
+            document.getElementById('list-validades').innerHTML = data.map(item => {
+                const dataVenc = new Date(item.data_vencimento);
+                // Compensa o fuso horário para não dar erro no dia
+                dataVenc.setHours(dataVenc.getHours() + 3); 
+                
+                const diffTime = dataVenc - hoje;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let status = 'status-ok';
+                let label = 'Em dia';
+
+                if (diffDays < 0) {
+                    status = 'status-vencido';
+                    label = 'Vencido!';
+                } else if (diffDays <= 30) {
+                    status = 'status-alerta';
+                    label = `Vence em ${diffDays} dias`;
+                }
+
+                // Formata a data para padrão BR (DD/MM/YYYY)
+                const dataFormatada = dataVenc.toLocaleDateString('pt-BR');
+
+                return `
+                    <div class="card">
+                        <div class="card-left">
+                            <h3 style="font-size: 1.05rem; font-weight: 700;">${item.produtos?.nome_produto || 'Produto s/ Nome'}</h3>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">Lote: ${item.lote || 'N/A'} | Qtd: ${item.quantidade}</span>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">Vencimento: <strong>${dataFormatada}</strong></span>
+                        </div>
+                        <div class="card-right">
+                            <div class="badge ${status}">${label}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Carrega as informações ao abrir a tela
+        fetchEstoque();
+        fetchValidades();
+    </script>
+</body>
+</html>

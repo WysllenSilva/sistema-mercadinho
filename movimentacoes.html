@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Entrada de Estoque - Mercadinho</title>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626;
+            --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        
+        header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+        .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        main { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
+        input { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
+        input:focus { border-color: var(--primary); }
+        input[readonly] { background-color: #f1f5f9; color: #64748b; font-weight: bold; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); margin-bottom: 10px; }
+        .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .btn-save { width: 100%; background-color: var(--success); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; cursor: pointer; margin-top: 10px; }
+        
+        .scanning { background-color: #ef4444 !important; }
+        .swal2-popup { border-radius: 15px !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="btn-voltar-topo" onclick="window.location.href='menu.html'">⬅️</button>
+        <span class="titulo-topo">Entrada de Estoque</span>
+        <div style="width: 45px;"></div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="reader"></div>
+            <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR PRODUTO</button>
+
+            <div class="form-group">
+                <label>Código EAN</label>
+                <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" onchange="buscarProduto(this.value)">
+            </div>
+
+            <div class="form-group">
+                <label>Produto Identificado</label>
+                <input type="text" id="nome_produto" placeholder="Aguardando bipagem..." readonly>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Quantidade (+)</label>
+                    <input type="number" id="quantidade" placeholder="Ex: 24" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Lote (Opcional)</label>
+                    <input type="text" id="lote" placeholder="Ex: L123">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Data de Vencimento</label>
+                <input type="date" id="data_vencimento">
+            </div>
+
+            <button class="btn-save" onclick="salvarEntrada()">📦 CONFIRMAR ENTRADA</button>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let html5QrCode;
+        let produtoSelecionadoId = null; 
+
+        // --- BUSCAR PRODUTO NO BANCO ---
+        async function buscarProduto(ean) {
+            if (!ean) return;
+            document.getElementById('nome_produto').value = "Buscando...";
+            produtoSelecionadoId = null;
+
+            try {
+                const { data, error } = await tabela_supabase
+                    .from('produtos')
+                    .select('id, nome_produto')
+                    .eq('codigo_barras', ean)
+                    .maybeSingle();
+
+                if (data) {
+                    document.getElementById('nome_produto').value = data.nome_produto;
+                    produtoSelecionadoId = data.id;
+                    document.getElementById('quantidade').focus(); // Pula pro próximo campo
+                } else {
+                    document.getElementById('nome_produto').value = "";
+                    document.getElementById('codigo_barras').value = "";
+                    Swal.fire('Não Cadastrado', 'Este produto não existe. Vá em "Produtos" e cadastre-o primeiro!', 'warning');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // --- SCANNER ---
+        const readerDiv = document.getElementById('reader');
+        const btnScan = document.getElementById('btn-toggle-scan');
+
+        async function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            readerDiv.style.display = 'block';
+            btnScan.innerText = "🛑 PARAR CÂMERA";
+            btnScan.classList.add('scanning');
+
+            await html5QrCode.start(
+                { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    document.getElementById('codigo_barras').value = decodedText;
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    stopScanner();
+                    buscarProduto(decodedText);
+                }, () => {}
+            ).catch(() => stopScanner());
+        }
+
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
+            readerDiv.style.display = 'none';
+            btnScan.innerText = "📸 ESCANEAR PRODUTO";
+            btnScan.classList.remove('scanning');
+        }
+
+        btnScan.addEventListener('click', () => readerDiv.style.display === 'none' ? startScanner() : stopScanner());
+
+        // --- SALVAR A ENTRADA NAS DUAS TABELAS ---
+        async function salvarEntrada() {
+            if (!produtoSelecionadoId) {
+                return Swal.fire('Atenção', 'Bipe um produto válido primeiro!', 'warning');
+            }
+
+            const qtd = parseInt(document.getElementById('quantidade').value);
+            const dataVenc = document.getElementById('data_vencimento').value;
+            const lote = document.getElementById('lote').value.trim() || 'SEM LOTE';
+
+            if (!qtd || qtd <= 0 || !dataVenc) {
+                return Swal.fire('Atenção', 'Preencha a quantidade e a data de vencimento!', 'warning');
+            }
+
+            try {
+                // 1. Adiciona na Prateleira Física
+                const { error: erroPrateleira } = await tabela_supabase
+                    .from('prateleira_fisica')
+                    .insert([{ 
+                        produto_id: produtoSelecionadoId, 
+                        lote: lote, 
+                        quantidade: qtd, 
+                        data_vencimento: dataVenc 
+                    }]);
+                
+                if (erroPrateleira) throw erroPrateleira;
+
+                // 2. Registra na Auditoria de Movimentações
+                const { error: erroMovimentacao } = await tabela_supabase
+                    .from('movimentacoes_estoque')
+                    .insert([{ 
+                        produto_id: produtoSelecionadoId, 
+                        tipo: 'ENTRADA', 
+                        quantidade: qtd, 
+                        motivo: 'Entrada manual de estoque' 
+                    }]);
+
+                if (erroMovimentacao) throw erroMovimentacao;
+
+                Swal.fire({ title: 'Sucesso!', text: 'Mercadoria adicionada à prateleira!', icon: 'success', timer: 2000, showConfirmButton: false });
+                
+                // Limpa o formulário
+                produtoSelecionadoId = null;
+                document.getElementById('codigo_barras').value = "";
+                document.getElementById('nome_produto').value = "";
+                document.getElementById('quantidade').value = "";
+                document.getElementById('lote').value = "";
+                document.getElementById('data_vencimento').value = "";
+
+            } catch (err) {
+                Swal.fire('Erro', 'Falha ao registrar entrada: ' + err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
