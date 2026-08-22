@@ -3,429 +3,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PDV Mobile - Gestão de Mercadinho</title>
+    <title>PDV - Mercadinho</title>
     
-    <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <!-- HTML5 QR Code (Leitor de Código de Barras) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- SweetAlert2 (Pop-ups bonitos) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <style>
         :root {
-            --primary: #2563eb;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --bg: #f8fafc;
-            --text: #0f172a;
-            --white: #ffffff;
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626;
+            --warning: #f59e0b; --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Topo Organizado com os 3 Botões Principais */
-        header {
-            background: var(--white);
-            padding: 15px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            z-index: 10;
-        }
-
-        .topo-titulo {
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .acoes-topo {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-
-        .btn-acao {
-            background: var(--white);
-            border: 2px solid #cbd5e1;
-            border-radius: 12px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.2s;
-        }
-
-        .btn-acao:active {
-            transform: scale(0.95);
-            background: #f1f5f9;
-        }
-
-        .btn-voltar-topo { background-color: #f1f5f9; }
-        .btn-buscar-topo { background-color: #eff6ff; border-color: #bfdbfe; }
-        .btn-camera-topo { background-color: #f8fafc; }
-
-        /* Área do Scanner Oculta/Visível */
-        #reader-container {
-            display: none;
-            margin-top: 15px;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
         
-        #reader {
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid var(--primary);
-        }
-
-        /* Meio: Carrinho */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            padding-bottom: 220px;
-        }
-
-        .cart-item {
-            background: var(--white);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            border-left: 5px solid var(--primary);
-        }
-
-        .item-info h3 { font-size: 1.2rem; margin-bottom: 4px; }
-        .item-info p { color: #64748b; font-size: 1.1rem; }
-
-        .btn-remove {
-            background: var(--danger);
-            color: white;
-            border: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-
-        /* Base Fixa (Total e Pagamento) */
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: var(--white);
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .total-panel {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 5px;
-        }
-
-        .total-label { font-size: 1.5rem; font-weight: bold; color: #64748b; }
-        .total-value { font-size: 2.5rem; font-weight: 900; color: var(--text); }
-
-        .payment-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-
-        .btn-pay {
-            padding: 20px 10px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 800;
-            color: white;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
-
-        .btn-pix { background-color: #32bcad; }
-        .btn-card { background-color: var(--primary); }
-        .btn-cash { background-color: var(--success); }
-
-        .empty-cart { text-align: center; margin-top: 50px; color: #94a3b8; font-size: 1.2rem; }
-        .btn-pay:active { transform: scale(0.95); }
-
+        /* Cabeçalho */
+        header { background: var(--primary); padding: 15px; display: flex; align-items: center; justify-content: space-between; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-header { background: rgba(255,255,255,0.2); border: none; border-radius: 8px; width: 45px; height: 45px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;}
+        .btn-caixa { width: auto; padding: 0 15px; font-weight: bold; font-size: 0.9rem; }
+        
+        main { flex: 1; display: flex; flex-direction: column; padding: 15px; gap: 15px; overflow-y: hidden; }
+        
+        /* Scanner e Input */
+        .scan-area { display: flex; gap: 10px; }
+        .input-codigo { flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
+        .input-codigo:focus { border-color: var(--primary); }
+        .btn-scan { background: #475569; color: white; border: none; border-radius: 10px; padding: 0 20px; font-size: 1.2rem; cursor: pointer; }
+        
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; display: none; border: 2px solid var(--primary); }
+        
+        /* Carrinho */
+        .carrinho { flex: 1; background: var(--white); border-radius: 12px; padding: 10px; overflow-y: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+        .item-carrinho:last-child { border-bottom: none; }
+        .item-nome { font-weight: 700; font-size: 1rem; }
+        .item-detalhes { font-size: 0.85rem; color: #64748b; }
+        .item-acoes { display: flex; align-items: center; gap: 10px; }
+        .btn-remover { background: #fee2e2; color: var(--danger); border: none; border-radius: 6px; padding: 5px 10px; font-weight: bold; cursor: pointer; }
+        
+        /* Resumo e Pagamento */
+        .checkout-area { background: var(--white); border-radius: 12px; padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .total-display { font-size: 2rem; font-weight: 900; text-align: center; color: var(--success); margin-bottom: 15px; }
+        
+        .grid-pgto { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .btn-pgto { border: none; padding: 15px 5px; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: transform 0.1s; }
+        .btn-pgto:active { transform: scale(0.95); }
+        .btn-pix { background: #10b981; }
+        .btn-dinheiro { background: #f59e0b; }
+        .btn-cartao { background: #3b82f6; }
+        
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="topo-titulo">Frente de Caixa</div>
-        
-        <!-- Os 3 Botões do Topo -->
-        <div class="acoes-topo">
-            <button class="btn-acao btn-voltar-topo" onclick="window.location.href='menu.html'" title="Voltar ao Menu">
-                ⬅️
-            </button>
-            <button class="btn-acao btn-buscar-topo" onclick="solicitarBusca()" title="Buscar Produto">
-                🔍
-            </button>
-            <button class="btn-acao btn-camera-topo" id="btn-toggle-scan" onclick="toggleScanner()" title="Escanear Código">
-                📸
-            </button>
-        </div>
-
-        <!-- Área do Leitor de Câmera -->
-        <div id="reader-container">
-            <div id="reader"></div>
-        </div>
+        <a href="menu.html" class="btn-header">⬅️</a>
+        <h1 style="font-size: 1.2rem; font-weight: 800; text-transform: uppercase;">Frente de Caixa</h1>
+        <button class="btn-header btn-caixa" onclick="mostrarResumoCaixa()">💰 CAIXA</button>
     </header>
 
-    <main id="cart-items">
-        <div class="empty-cart">Carrinho vazio.</div>
+    <main>
+        <div id="reader"></div>
+        
+        <div class="scan-area">
+            <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe ou digite o código" onchange="buscarProduto(this.value)">
+            <button class="btn-scan" onclick="toggleScanner()">📸</button>
+        </div>
+
+        <div class="carrinho" id="lista-carrinho">
+            <div style="text-align: center; color: #64748b; margin-top: 20px;">Carrinho vazio</div>
+        </div>
+
+        <div class="checkout-area">
+            <div class="total-display" id="display-total">R$ 0,00</div>
+            <div class="grid-pgto">
+                <button class="btn-pgto btn-pix" onclick="finalizarVenda('PIX')"><span>PIX</span></button>
+                <button class="btn-pgto btn-dinheiro" onclick="finalizarVenda('DINHEIRO')"><span>DINHEIRO</span></button>
+                <button class="btn-pgto btn-cartao" onclick="finalizarVenda('CARTÃO')"><span>CARTÃO</span></button>
+            </div>
+        </div>
     </main>
 
-    <footer>
-        <div class="total-panel">
-            <span class="total-label">TOTAL:</span>
-            <span class="total-value" id="total-amount">R$ 0,00</span>
-        </div>
-        <div class="payment-grid">
-            <button class="btn-pay btn-pix" onclick="finishSale('PIX')">PIX</button>
-            <button class="btn-pay btn-card" onclick="finishSale('CARTÃO')">CARTÃO</button>
-            <button class="btn-pay btn-cash" onclick="finishSale('DINHEIRO')">DINHEIRO</button>
-        </div>
-    </footer>
-
     <script>
-        // CONFIGURAÇÕES SUPABASE
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
-
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let dbProducts = [];
-        let cart = [];
+        let carrinho = [];
         let html5QrCode;
 
-        // INICIALIZAÇÃO: Carrega os produtos do banco
-        async function loadApp() {
-            const { data, error } = await tabela_supabase.from('produtos').select('*');
-            if (error) {
-                console.error('Erro ao carregar catálogo:', error);
-                Swal.fire('Erro', 'Falha ao conectar com banco de dados.', 'error');
-            } else {
-                dbProducts = data;
-            }
-        }
-
-        // --- LÓGICA DO BOTÃO DE BUSCA (Abre caixinha moderna para digitar código ou nome) ---
-        async function solicitarBusca() {
-            const { value: query } = await Swal.fire({
-                title: 'Buscar Produto',
-                input: 'text',
-                inputPlaceholder: 'Digite o código ou nome...',
-                showCancelButton: true,
-                confirmButtonText: 'Buscar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#2563eb'
-            });
-
-            if (query) {
-                processarBusca(query.toLowerCase().trim());
-            }
-        }
-
-        function processarBusca(query) {
-            const product = dbProducts.find(p => 
-                p.codigo_barras === query || 
-                (p.nome_produto && p.nome_produto.toLowerCase().includes(query))
-            );
-
-            if (product) {
-                addToCart(product);
-            } else {
-                Swal.fire({
-                    title: 'Não Encontrado',
-                    text: 'O produto não está cadastrado.',
-                    icon: 'warning',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-        }
-
-        // --- LÓGICA DO SCANNER (CÂMERA) ---
-        function toggleScanner() {
-            const container = document.getElementById('reader-container');
-            if (container.style.display === 'block') {
-                stopScanner();
-            } else {
-                startScanner();
-            }
-        }
-
-        async function startScanner() {
-            const container = document.getElementById('reader-container');
-            const btnCam = document.getElementById('btn-toggle-scan');
-            
-            html5QrCode = new Html5Qrcode("reader");
-            container.style.display = 'block';
-            btnCam.style.backgroundColor = '#fee2e2'; // Fica avermelhado leve
-            btnCam.style.borderColor = '#ef4444';
+        // --- BUSCA O PRODUTO E VERIFICA ESTOQUE MÍNIMO ---
+        async function buscarProduto(ean) {
+            if (!ean) return;
+            document.getElementById('codigo_barras').value = ""; // Limpa para o próximo bipe
 
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 10, qrbox: { width: 250, height: 150 } },
-                    (decodedText) => {
-                        if (navigator.vibrate) navigator.vibrate(100); // Vibração de confirmação
-                        stopScanner(); // Fecha a câmera
-                        processarBusca(decodedText.toLowerCase().trim()); // Processa o código lido
-                    },
-                    (errorMessage) => { }
-                );
+                // Busca o produto e a quantidade dele na prateleira de uma vez
+                const { data: prod, error } = await tabela_supabase
+                    .from('produtos')
+                    .select(`id, nome_produto, preco_venda, estoque_minimo, prateleira_fisica ( quantidade )`)
+                    .eq('codigo_barras', ean)
+                    .maybeSingle();
+
+                if (prod) {
+                    // Calcula saldo atual na prateleira
+                    const saldoAtual = prod.prateleira_fisica.reduce((acc, lote) => acc + lote.quantidade, 0);
+                    const minimo = prod.estoque_minimo || 5;
+
+                    // Alerta de Estoque Mínimo (Apenas avisa, não trava a venda)
+                    if (saldoAtual <= minimo) {
+                        Swal.fire({
+                            title: 'Estoque Baixo!',
+                            text: `${prod.nome_produto} tem apenas ${saldoAtual} un. na prateleira.`,
+                            icon: 'warning',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+
+                    adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda);
+                } else {
+                    Swal.fire('Não Encontrado', 'Produto não cadastrado.', 'error');
+                }
             } catch (err) {
-                console.error("Erro na câmera: ", err);
-                Swal.fire('Câmera', 'Não foi possível acessar a câmera.', 'warning');
-                stopScanner();
+                console.error(err);
             }
         }
 
-        async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                await html5QrCode.stop();
-            }
-            document.getElementById('reader-container').style.display = 'none';
-            const btnCam = document.getElementById('btn-toggle-scan');
-            btnCam.style.backgroundColor = 'var(--white)';
-            btnCam.style.borderColor = '#cbd5e1';
-        }
-
-        // --- GERENCIAMENTO DO CARRINHO ---
-        function addToCart(product) {
-            const existing = cart.find(item => item.id === product.id);
-            if (existing) {
-                existing.quantidade += 1;
+        function adicionarAoCarrinho(id, nome, preco) {
+            const index = carrinho.findIndex(item => item.id === id);
+            if (index > -1) {
+                carrinho[index].quantidade += 1; // Soma +1 se já estiver no carrinho
             } else {
-                cart.push({
-                    id: product.id,
-                    nome: product.nome_produto,
-                    preco: product.preco_venda || 0,
-                    quantidade: 1
-                });
+                carrinho.push({ id, nome, preco, quantidade: 1 });
             }
-            renderCart();
+            atualizarInterface();
+            if (navigator.vibrate) navigator.vibrate(100); // Feedback tátil
         }
 
-        function removeFromCart(index) {
-            cart.splice(index, 1);
-            renderCart();
+        function removerItem(index) {
+            carrinho.splice(index, 1);
+            atualizarInterface();
         }
 
-        function renderCart() {
-            const cartContainer = document.getElementById('cart-items');
-            const totalDisplay = document.getElementById('total-amount');
-            
-            if (cart.length === 0) {
-                cartContainer.innerHTML = '<div class="empty-cart">Carrinho vazio.</div>';
-                totalDisplay.innerText = 'R$ 0,00';
+        function atualizarInterface() {
+            const lista = document.getElementById('lista-carrinho');
+            let total = 0;
+
+            if (carrinho.length === 0) {
+                lista.innerHTML = `<div style="text-align: center; color: #64748b; margin-top: 20px;">Carrinho vazio</div>`;
+                document.getElementById('display-total').innerText = "R$ 0,00";
                 return;
             }
 
-            let total = 0;
-            cartContainer.innerHTML = '';
-
-            cart.forEach((item, index) => {
-                const precoFormatado = item.preco ? item.preco.toFixed(2).replace('.', ',') : "0,00";
-                const subtotal = (item.preco || 0) * item.quantidade;
+            lista.innerHTML = carrinho.map((item, index) => {
+                const subtotal = item.quantidade * item.preco;
                 total += subtotal;
-
-                cartContainer.innerHTML += `
-                    <div class="cart-item">
-                        <div class="item-info">
-                            <h3>${item.nome}</h3>
-                            <p>${item.quantidade}x R$ ${precoFormatado} | <strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></p>
+                return `
+                    <div class="item-carrinho">
+                        <div>
+                            <div class="item-nome">${item.nome}</div>
+                            <div class="item-detalhes">${item.quantidade}x R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
                         </div>
-                        <button class="btn-remove" onclick="removeFromCart(${index})">X</button>
+                        <div class="item-acoes">
+                            <span style="font-weight: 800;">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                            <button class="btn-remover" onclick="removerItem(${index})">X</button>
+                        </div>
                     </div>
                 `;
+            }).join('');
+
+            document.getElementById('display-total').innerText = "R$ " + total.toFixed(2).replace('.', ',');
+        }
+
+        // --- FINALIZAR VENDA (A MÁGICA DO ESTOQUE FIFO) ---
+        async function finalizarVenda(forma_pagamento) {
+            if (carrinho.length === 0) return Swal.fire('Atenção', 'O carrinho está vazio!', 'warning');
+
+            const totalVenda = carrinho.reduce((acc, item) => acc + (item.quantidade * item.preco), 0);
+
+            // Confirmação rápida na tela
+            const result = await Swal.fire({
+                title: 'Confirmar Venda?',
+                html: `Total: <b>R$ ${totalVenda.toFixed(2).replace('.', ',')}</b> no <b>${forma_pagamento}</b>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#dc2626',
+                confirmButtonText: 'Sim, Finalizar'
             });
 
-            totalDisplay.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
-        }
+            if (!result.isConfirmed) return;
 
-        // --- FINALIZAÇÃO DA VENDA ---
-        async function finishSale(method) {
-            if (cart.length === 0) {
-                Swal.fire('Vazio', 'Adicione produtos antes de finalizar.', 'info');
-                return;
-            }
-
-            const totalVenda = cart.reduce((acc, item) => acc + ((item.preco || 0) * item.quantidade), 0);
+            Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // 1. Grava na tabela de vendas
-                const { data: vendaData, error: vendaError } = await tabela_supabase
+                // 1. Cria a Venda no Banco
+                const { data: novaVenda, error: errVenda } = await tabela_supabase
                     .from('vendas')
-                    .insert([{ valor_total: totalVenda, forma_pagamento: method }])
-                    .select();
+                    .insert([{ valor_total: totalVenda, forma_pagamento: forma_pagamento }])
+                    .select()
+                    .single();
+                if (errVenda) throw errVenda;
 
-                if (vendaError) throw vendaError;
+                // 2. Loop para registrar Itens, Movimentação e Abater Prateleira (FIFO)
+                for (const item of carrinho) {
+                    
+                    // A. Salva os Itens da Venda
+                    await tabela_supabase.from('itens_venda').insert([{
+                        venda_id: novaVenda.id, produto_id: item.id, quantidade: item.quantidade, preco_unitario: item.preco
+                    }]);
 
-                const vendaId = vendaData[0].id;
+                    // B. Registra a Auditoria de Movimentação (Saída)
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{
+                        produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: 'Venda PDV'
+                    }]);
 
-                // 2. Grava os itens na tabela de itens_venda
-                const itensParaInserir = cart.map(item => ({
-                    venda_id: vendaId,
-                    produto_id: item.id,
-                    quantidade: item.quantidade,
-                    preco_unitario: item.preco
-                }));
+                    // C. Lógica FIFO: Abate da Prateleira (Vence primeiro, sai primeiro)
+                    let qtdRestanteParaAbater = item.quantidade;
+                    
+                    const { data: lotes } = await tabela_supabase
+                        .from('prateleira_fisica')
+                        .select('id, quantidade')
+                        .eq('produto_id', item.id)
+                        .order('data_vencimento', { ascending: true }); // Mais antigos primeiro
 
-                const { error: itensError } = await tabela_supabase.from('itens_venda').insert(itensParaInserir);
-                if (itensError) throw itensError;
+                    if (lotes) {
+                        for (const lote of lotes) {
+                            if (qtdRestanteParaAbater <= 0) break; // Já abateu tudo
 
-                Swal.fire({
-                    title: 'Venda Concluída!',
-                    text: 'Forma: ' + method,
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                            if (lote.quantidade <= qtdRestanteParaAbater) {
+                                // Se o lote for menor ou igual ao que precisa, zera/apaga o lote
+                                qtdRestanteParaAbater -= lote.quantidade;
+                                await tabela_supabase.from('prateleira_fisica').delete().eq('id', lote.id);
+                            } else {
+                                // Se o lote for maior, apenas atualiza a diferença
+                                const novoSaldo = lote.quantidade - qtdRestanteParaAbater;
+                                await tabela_supabase.from('prateleira_fisica').update({ quantidade: novoSaldo }).eq('id', lote.id);
+                                qtdRestanteParaAbater = 0;
+                            }
+                        }
+                    }
+                }
 
-                cart = [];
-                renderCart();
+                Swal.fire({ title: 'Venda Concluída!', icon: 'success', timer: 1500, showConfirmButton: false });
+                carrinho = []; // Limpa o carrinho
+                atualizarInterface();
 
-            } catch (error) {
-                console.error('Erro:', error);
-                Swal.fire('Erro', 'Falha ao gravar a venda no banco.', 'error');
+            } catch (err) {
+                Swal.fire('Erro', 'Falha ao processar a venda: ' + err.message, 'error');
             }
         }
 
-        // Inicializa o app baixando os produtos
-        loadApp();
+        // --- DASHBOARD: FECHAMENTO DE CAIXA DO DIA ---
+        async function mostrarResumoCaixa() {
+            Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            try {
+                // Pega a data de hoje formatada (00:00 até 23:59)
+                const hoje = new Date();
+                const start = new Date(hoje.setHours(0,0,0,0)).toISOString();
+                const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
+
+                const { data: vendasDia, error } = await tabela_supabase
+                    .from('vendas')
+                    .select('valor_total, forma_pagamento')
+                    .gte('data_venda', start)
+                    .lte('data_venda', end);
+                
+                if (error) throw error;
+
+                let totalGeral = 0;
+                let totais = { PIX: 0, DINHEIRO: 0, CARTÃO: 0 };
+
+                vendasDia.forEach(v => {
+                    totalGeral += v.valor_total;
+                    totais[v.forma_pagamento] += v.valor_total;
+                });
+
+                const formatMoeda = (val) => "R$ " + val.toFixed(2).replace('.', ',');
+
+                const relatorioHTML = `
+                    <div style="text-align: left; font-size: 1.1rem; padding: 10px;">
+                        <p style="border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">🟢 <b>PIX:</b> ${formatMoeda(totais.PIX)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatMoeda(totais.DINHEIRO)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatMoeda(totais.CARTÃO)}</p>
+                        <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Total do Dia: <br> ${formatMoeda(totalGeral)}</h3>
+                    </div>
+                `;
+
+                Swal.fire({
+                    title: 'Resumo do Caixa (Hoje)',
+                    html: relatorioHTML,
+                    confirmButtonText: 'Fechar',
+                    confirmButtonColor: '#475569'
+                });
+
+            } catch(err) {
+                Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error');
+            }
+        }
+
+        // --- SCANNER DA CÂMERA ---
+        function toggleScanner() {
+            const div = document.getElementById('reader');
+            if (div.style.display === 'block') {
+                if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+                div.style.display = 'none';
+            } else {
+                div.style.display = 'block';
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        html5QrCode.stop();
+                        div.style.display = 'none';
+                        buscarProduto(decodedText);
+                    }, () => {}
+                );
+            }
+        }
     </script>
 </body>
 </html>
