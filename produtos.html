@@ -30,7 +30,6 @@
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
         input:focus, select:focus { border-color: var(--primary); }
         
-        /* Layout de Grid para a Matemática de Preços */
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .grid-3 label { font-size: 0.85rem; }
 
@@ -45,9 +44,7 @@
 
         .acoes-container { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
 
-        /* Oculta o formulário inicialmente */
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
-
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
@@ -61,16 +58,17 @@
 
     <main>
         <div class="container">
-            <!-- BLOCO DE LEITURA (Sempre Visível) -->
+            <!-- BLOCO DE LEITURA -->
             <div class="form-group">
                 <label for="codigo_barras">Código de Barras (EAN)</label>
-                <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" onchange="buscarProdutoAPI(this.value)">
+                <!-- Alterado para oninput e onchange para aceitar digitação e enter/perda de foco -->
+                <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
                 
                 <div id="reader"></div>
                 <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR CÓDIGO</button>
             </div>
 
-            <!-- BLOCO DO FORMULÁRIO (Oculto Inicialmente) -->
+            <!-- BLOCO DO FORMULÁRIO -->
             <div id="form-detalhes">
                 <div class="form-group">
                     <label for="nome">Nome do Produto</label>
@@ -114,7 +112,10 @@
 
                 <div class="acoes-container" id="box-btn-editar" style="display: none;">
                     <button class="btn-acao btn-update" onclick="salvarProduto()">🔄 ATUALIZAR PRODUTO</button>
+                    
+                    <!-- BOTÃO DE EXCLUSÃO OCULTO (COMENTADO A PEDIDO) 
                     <button class="btn-acao btn-delete" onclick="excluirProduto()">🗑️ EXCLUIR DEFINITIVAMENTE</button>
+                    -->
                 </div>
             </div>
         </div>
@@ -134,7 +135,15 @@
         const boxNovo = document.getElementById('box-btn-novo');
         const boxEditar = document.getElementById('box-btn-editar');
 
-        // --- MATEMÁTICA DE PRECIFICAÇÃO ---
+        // Dispara a busca automaticamente se o código digitado tiver 8 ou mais dígitos
+        function checarDigitacao(ean) {
+            if (ean.length >= 8) {
+                buscarProdutoAPI(ean);
+            } else {
+                boxForm.style.display = 'none'; // Esconde se apagar o código
+            }
+        }
+
         function parseValor(stringValor) {
             if (!stringValor) return 0;
             return parseFloat(stringValor.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0;
@@ -152,7 +161,6 @@
             elemento.value = valor === "0,00" ? "" : valor;
         }
 
-        // Se o operador digitar o Custo ou a Margem, calcula a Venda
         function calcularPrecoVenda() {
             let custo = parseValor(document.getElementById('preco_custo').value);
             let margem = parseFloat(document.getElementById('porcentagem_lucro').value) || 0;
@@ -163,7 +171,6 @@
             }
         }
 
-        // Se o operador digitar a Venda fixa, calcula a Margem
         function calcularMargem() {
             let custo = parseValor(document.getElementById('preco_custo').value);
             let venda = parseValor(document.getElementById('preco_venda').value);
@@ -174,20 +181,17 @@
             }
         }
 
-        // --- BUSCA INTELIGENTE ---
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
-            Swal.fire({ title: 'Buscando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // Tenta achar no Supabase
                 const { data: prodLocal } = await tabela_supabase
                     .from('produtos')
                     .select('*')
                     .eq('codigo_barras', ean)
                     .maybeSingle();
 
-                boxForm.style.display = 'block'; // Revela o formulário
+                boxForm.style.display = 'block'; 
 
                 if (prodLocal) {
                     produtoExistenteId = prodLocal.id;
@@ -199,13 +203,11 @@
                     
                     boxNovo.style.display = 'none';
                     boxEditar.style.display = 'flex';
-                    Swal.close();
                 } else {
                     produtoExistenteId = null;
                     boxNovo.style.display = 'flex';
                     boxEditar.style.display = 'none';
                     
-                    // Se não tem no Supabase, tenta a API Brasil
                     const response = await fetch(`https://br.openfoodfacts.org/api/v0/product/${ean}.json`);
                     const data = await response.json();
 
@@ -220,15 +222,12 @@
                     document.getElementById('preco_custo').value = "";
                     document.getElementById('porcentagem_lucro').value = "";
                     document.getElementById('preco_venda').value = "";
-                    Swal.close();
                 }
             } catch (err) {
-                Swal.close();
                 console.log("Erro:", err);
             }
         }
 
-        // --- SALVAR OU ATUALIZAR ---
         async function salvarProduto() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome').value.trim();
@@ -268,7 +267,7 @@
             }
         }
 
-        // --- EXCLUSÃO COM SEGURANÇA ---
+        // Função de exclusão mantida no código (mas o botão está comentado no HTML)
         async function excluirProduto() {
             if (!produtoExistenteId) return;
 
@@ -284,25 +283,13 @@
 
             if (!confirmacao.isConfirmed) return;
 
-            Swal.fire({ title: 'Apagando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
             try {
                 const { error } = await tabela_supabase.from('produtos').delete().eq('id', produtoExistenteId);
-                
-                if (error) {
-                    // A Arquitetura Relacional entra em ação aqui:
-                    // Se o produto estiver amarrado a uma venda ou prateleira, o PostgreSQL bloqueia.
-                    if (error.code === '23503') {
-                        throw new Error("Este produto não pode ser excluído pois já possui registro de vendas ou saldo no estoque. Por segurança fiscal, zere o estoque e altere o nome para 'Inativo'.");
-                    }
-                    throw error;
-                }
-
+                if (error) throw error;
                 Swal.fire({ title: 'Apagado!', text: 'O produto foi removido.', icon: 'success', timer: 2000, showConfirmButton: false });
                 limparFormulario();
-
             } catch (err) {
-                Swal.fire('Ação Bloqueada', err.message, 'error');
+                Swal.fire('Ação Bloqueada', 'Não é possível excluir produtos que já possuem histórico de vendas ou estoque.', 'error');
             }
         }
 
@@ -313,7 +300,6 @@
             if (readerDiv.style.display !== 'none') stopScanner();
         }
 
-        // --- SCANNER DE CÂMERA ---
         btnScan.addEventListener('click', () => {
             if (readerDiv.style.display === 'none') {
                 html5QrCode = new Html5Qrcode("reader");
