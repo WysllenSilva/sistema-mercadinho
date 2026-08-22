@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDV Mobile - Gestão de Mercadinho</title>
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Topo: Busca */
+        header {
+            background: var(--white);
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        input#search-input {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        input#search-input:focus { border-color: var(--primary); }
+
+        .btn-search {
+            padding: 0 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Meio: Carrinho */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            padding-bottom: 220px;
+        }
+
+        .cart-item {
+            background: var(--white);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary);
+        }
+
+        .item-info h3 { font-size: 1.2rem; margin-bottom: 4px; }
+        .item-info p { color: #64748b; font-size: 1.1rem; }
+
+        .btn-remove {
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Base Fixa */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--white);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .total-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+        }
+
+        .total-label { font-size: 1.5rem; font-weight: bold; color: #64748b; }
+        .total-value { font-size: 2.5rem; font-weight: 900; color: var(--text); }
+
+        .payment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-pay {
+            padding: 20px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-pix { background-color: #32bcad; }
+        .btn-card { background-color: var(--primary); }
+        .btn-cash { background-color: var(--success); }
+
+        /* Estado Vazio */
+        .empty-cart {
+            text-align: center;
+            margin-top: 50px;
+            color: #94a3b8;
+            font-size: 1.2rem;
+        }
+
+        .btn-pay:active, .btn-search:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Produto ou Cód. Barras" autocomplete="off">
+            <button class="btn-search" onclick="searchProduct()">BUSCAR</button>
+        </div>
+    </header>
+
+    <main id="cart-items">
+        <div class="empty-cart">Carrinho vazio.</div>
+    </main>
+
+    <footer>
+        <div class="total-panel">
+            <span class="total-label">TOTAL:</span>
+            <span class="total-value" id="total-amount">R$ 0,00</span>
+        </div>
+        <div class="payment-grid">
+            <button class="btn-pay btn-pix" onclick="finishSale('PIX')">PIX</button>
+            <button class="btn-pay btn-card" onclick="finishSale('CARTÃO')">CARTÃO</button>
+            <button class="btn-pay btn-cash" onclick="finishSale('DINHEIRO')">DINHEIRO</button>
+        </div>
+    </footer>
+
+    <script>
+        // CONFIGURAÇÕES SUPABASE
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+
+        // AQUI ESTÁ A SUA VARIÁVEL CUSTOMIZADA
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ESTADO DA APLICAÇÃO
+        let dbProducts = [];
+        let cart = [];
+
+        // INICIALIZAÇÃO
+        async function loadApp() {
+            const { data, error } = await tabela_supabase
+                .from('produtos')
+                .select('*');
+            
+            if (error) {
+                console.error('Erro ao carregar catálogo:', error);
+                alert('Erro ao conectar com o banco de dados.');
+            } else {
+                dbProducts = data;
+            }
+        }
+
+        // BUSCA E ADIÇÃO
+        function searchProduct() {
+            const input = document.getElementById('search-input');
+            const query = input.value.toLowerCase().trim();
+            
+            if (!query) return;
+
+            const product = dbProducts.find(p => 
+                p.codigo_barras === query || 
+                p.nome.toLowerCase().includes(query)
+            );
+
+            if (product) {
+                addToCart(product);
+                input.value = '';
+                input.focus();
+            } else {
+                alert('Produto não encontrado!');
+            }
+        }
+
+        function addToCart(product) {
+            const existing = cart.find(item => item.id === product.id);
+            
+            if (existing) {
+                existing.quantidade += 1;
+            } else {
+                cart.push({
+                    id: product.id,
+                    nome: product.nome,
+                    preco: product.preco_venda || product.preco,
+                    quantidade: 1
+                });
+            }
+            renderCart();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        // RENDERIZAÇÃO
+        function renderCart() {
+            const cartContainer = document.getElementById('cart-items');
+            const totalDisplay = document.getElementById('total-amount');
+            
+            if (cart.length === 0) {
+                cartContainer.innerHTML = '<div class="empty-cart">Carrinho vazio.</div>';
+                totalDisplay.innerText = 'R$ 0,00';
+                return;
+            }
+
+            let total = 0;
+            cartContainer.innerHTML = '';
+
+            cart.forEach((item, index) => {
+                const precoFormatado = item.preco ? item.preco.toFixed(2) : "0.00";
+                const subtotal = (item.preco || 0) * item.quantidade;
+                total += subtotal;
+
+                cartContainer.innerHTML += `
+                    <div class="cart-item">
+                        <div class="item-info">
+                            <h3>${item.nome}</h3>
+                            <p>${item.quantidade}x R$ ${precoFormatado} | <strong>R$ ${subtotal.toFixed(2)}</strong></p>
+                        </div>
+                        <button class="btn-remove" onclick="removeFromCart(${index})">X</button>
+                    </div>
+                `;
+            });
+
+            totalDisplay.innerText = `R$ ${total.toFixed(2)}`;
+        }
+
+        // FINALIZAÇÃO DA VENDA
+        async function finishSale(method) {
+            if (cart.length === 0) {
+                alert('O carrinho está vazio!');
+                return;
+            }
+
+            const totalVenda = cart.reduce((acc, item) => acc + ((item.preco || 0) * item.quantidade), 0);
+
+            try {
+                // 1. Inserir na tabela 'vendas'
+                const { data: vendaData, error: vendaError } = await tabela_supabase
+                    .from('vendas')
+                    .insert([{ 
+                        valor_total: totalVenda, 
+                        forma_pagamento: method 
+                    }])
+                    .select();
+
+                if (vendaError) throw vendaError;
+
+                const vendaId = vendaData[0].id;
+
+                // 2. Preparar itens para 'itens_venda'
+                const itensParaInserir = cart.map(item => ({
+                    venda_id: vendaId,
+                    produto_id: item.id,
+                    quantidade: item.quantidade,
+                    preco_unitario: item.preco
+                }));
+
+                // 3. Inserir todos os itens
+                const { error: itensError } = await tabela_supabase
+                    .from('itens_venda')
+                    .insert(itensParaInserir);
+
+                if (itensError) throw itensError;
+
+                // Sucesso
+                alert('VENDA FINALIZADA COM SUCESSO!\nForma: ' + method);
+                cart = [];
+                renderCart();
+
+            } catch (error) {
+                console.error('Erro na transação:', error);
+                alert('Erro ao processar venda: ' + error.message);
+            }
+        }
+
+        document.getElementById('search-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchProduct();
+            }
+        });
+
+        // Início
+        loadApp();
+
+    </script>
+</body>
+</html>

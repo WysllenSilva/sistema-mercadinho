@@ -159,70 +159,71 @@
 
     <script>
     // --- 1. CONFIGURAÇÕES DO SUPABASE ---
-const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
-let clienteBD;
-
-try {
-    clienteBD = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (erro) {
-    console.error("Erro ao inicializar o Supabase:", erro);
-}
-
-// --- 2. LÓGICA DA INTERFACE (Teclado) ---
-let pinDigitado = "";
-const displayElement = document.getElementById('display-pin');
-
-function atualizarVisor() {
-    displayElement.textContent = "*".repeat(pinDigitado.length);
-}
-
-function addNumero(num) {
-    if (pinDigitado.length < 8) { 
-        pinDigitado += num;
-        atualizarVisor();
-    }
-}
-
-function limpar() {
-    pinDigitado = "";
-    atualizarVisor();
-}
-
-// --- 3. LÓGICA DE LOGIN ---
-async function validarAcesso() {
-    if (pinDigitado === "") {
-        alert("Por favor, digite a senha.");
-        return;
-    }
-
-    if (!clienteBD) {
-        alert("Erro crítico: Banco de dados inoperante. Verifique sua conexão.");
-        return;
-    }
-
-    const loginBox = document.getElementById('login-box');
-    loginBox.classList.add('loading');
+    const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+    let tabela_supabase;
 
     try {
-        const { data, error } = await clienteBD
-            .from('usuarios')
-            .select('nome')
-            .eq('pin_senha', pinDigitado)
-            .single();
-
-        if (error || !data) {
-            alert("SENHA INCORRETA!");
-            limpar();
-        } else {
-            alert("ACESSO LIBERADO!\nBem-vindo(a), " + data.nome);
-        }
-    } catch (err) {
-        console.error("Erro de conexão:", err);
-        alert("Falha na comunicação com o sistema.");
-    } finally {
-        loginBox.classList.remove('loading');
+        tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (erro) {
+        console.error("Erro ao inicializar o Supabase:", erro);
     }
+
+    // --- 2. LÓGICA DA INTERFACE (Teclado) ---
+    let pinDigitado = "";
+    const displayElement = document.getElementById('display-pin');
+
+    function atualizarVisor() {
+        displayElement.textContent = "*".repeat(pinDigitado.length);
+    }
+
+    function addNumero(num) {
+        if (pinDigitado.length < 8) { 
+            pinDigitado += num;
+            atualizarVisor();
+        }
+    }
+
+    function limpar() {
+        pinDigitado = "";
+        atualizarVisor();
+    }
+
+    // --- 3. LÓGICA DE LOGIN ---
+    async function validarAcesso() {
+        if (pinDigitado === "") {
+            alert("Por favor, digite a senha.");
+            return;
+        }
+
+        if (!tabela_supabase) {
+            alert("Erro crítico: Banco de dados inoperante. Verifique sua conexão.");
+            return;
+        }
+
+        const loginBox = document.getElementById('login-box');
+        loginBox.classList.add('loading');
+
+        try {
+            const { data, error } = await tabela_supabase
+                .from('usuarios')
+                .select('nome')
+                .eq('pin_senha', pinDigitado)
+                .single();
+
+            if (error || !data) {
+                alert("SENHA INCORRETA!");
+                limpar();
+            } else {
+                alert("ACESSO LIBERADO!\nBem-vindo(a), " + data.nome);
+                window.location.href = "pdv.html";
+            }
+        } catch (err) {
+            console.error("Erro de conexão:", err);
+            alert("Falha na comunicação com o sistema.");
+        } finally {
+            loginBox.classList.remove('loading');
+        }
     }
     </script>
 </body>
