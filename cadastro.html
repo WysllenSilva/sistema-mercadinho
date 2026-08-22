@@ -75,13 +75,12 @@
             border-color: var(--primary);
         }
 
-        /* Área do Scanner */
         #reader {
             width: 100%;
             margin-bottom: 20px;
             border-radius: 12px;
             overflow: hidden;
-            display: none; /* Inicialmente oculto */
+            display: none; 
             border: 2px solid var(--primary);
         }
 
@@ -121,7 +120,6 @@
             transform: scale(0.98);
         }
 
-        /* Feedback visual para scanner */
         .scanning {
             background-color: #ef4444 !important;
         }
@@ -132,12 +130,10 @@
     <div class="container">
         <h1>Cadastro de Produto</h1>
 
-        <!-- Campo 1: Código de Barras -->
         <div class="form-group">
             <label for="codigo_barras">Código de Barras</label>
             <input type="text" id="codigo_barras" placeholder="000000000000">
             
-            <!-- Área da Câmera -->
             <div id="reader"></div>
             
             <button type="button" class="btn-scan" id="btn-toggle-scan">
@@ -145,19 +141,16 @@
             </button>
         </div>
 
-        <!-- Campo 2: Nome -->
         <div class="form-group">
             <label for="nome">Nome do Produto</label>
             <input type="text" id="nome" placeholder="Ex: Arroz 5kg">
         </div>
 
-        <!-- Campo 3: Preço -->
         <div class="form-group">
             <label for="preco_venda">Preço de Venda (R$)</label>
-            <input type="number" id="preco_venda" step="0.01" placeholder="0.00">
+            <input type="text" id="preco_venda" placeholder="R$ 0,00" onkeyup="formatarMoeda(this)">
         </div>
 
-        <!-- Botão Salvar -->
         <button class="btn-save" onclick="salvarProduto()">
             💾 SALVAR PRODUTO
         </button>
@@ -165,9 +158,10 @@
 
     <script>
         // --- CONFIGURAÇÃO SUPABASE ---
+        // COLOQUE SUAS CHAVES AQUI
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
-
+        
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- VARIÁVEIS DO SCANNER ---
@@ -189,12 +183,11 @@
                     { facingMode: "environment" }, 
                     scannerConfig,
                     (decodedText) => {
-                        // Sucesso na leitura
                         inputCodigo.value = decodedText;
                         beep();
                         stopScanner();
                     },
-                    (errorMessage) => { /* Silencioso para erros de busca frame a frame */ }
+                    (errorMessage) => { }
                 );
             } catch (err) {
                 console.error("Erro ao iniciar câmera: ", err);
@@ -220,26 +213,34 @@
             }
         });
 
-        // Feedback sonoro/visual simples
         function beep() {
-            // Vibração no celular se disponível
             if (navigator.vibrate) navigator.vibrate(100);
-            // Feedback visual no input
             inputCodigo.style.backgroundColor = "#dcfce7";
             setTimeout(() => inputCodigo.style.backgroundColor = "", 500);
+        }
+
+        // --- FORMATAÇÃO DE MOEDA ---
+        function formatarMoeda(elemento) {
+            let valor = elemento.value.replace(/\D/g, "");
+            valor = (valor / 100).toFixed(2) + "";
+            valor = valor.replace(".", ",");
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            elemento.value = valor === "0,00" ? "" : "R$ " + valor;
         }
 
         // --- LÓGICA DE BANCO DE DADOS ---
         async function salvarProduto() {
             const codigo = inputCodigo.value.trim();
             const nome = document.getElementById('nome').value.trim();
-            const preco = document.getElementById('preco_venda').value;
+            let precoTexto = document.getElementById('preco_venda').value;
 
-            // Validação simples
-            if (!codigo || !nome || !preco) {
+            if (!codigo || !nome || !precoTexto) {
                 alert("Por favor, preencha todos os campos!");
                 return;
             }
+
+            // Converte de volta de "R$ 5,00" para número (5.00) pro banco aceitar
+            let precoNumero = parseFloat(precoTexto.replace("R$ ", "").replace(".", "").replace(",", "."));
 
             try {
                 const { error } = await tabela_supabase
@@ -247,8 +248,8 @@
                     .insert([
                         { 
                             codigo_barras: codigo, 
-                            nome: nome, 
-                            preco_venda: parseFloat(preco) 
+                            nome_produto: nome, // CORREÇÃO APLICADA AQUI
+                            preco_venda: precoNumero 
                         }
                     ]);
 
