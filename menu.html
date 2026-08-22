@@ -60,6 +60,7 @@
 
         .btn-pdv { background-color: var(--primary); }
         .btn-cad { background-color: var(--success); }
+        .btn-est { background-color: var(--success); }
         .btn-sair { background-color: var(--danger); margin-top: 40px; }
 
         .btn-menu:active { transform: scale(0.98); }
@@ -71,15 +72,19 @@
 
     <div class="menu-grid">
         <button class="btn-menu btn-pdv" onclick="window.location.href='pdv.html'">
-            🛒 FRENTE DE CAIXA
+            🛒 Vender (PDV)
         </button>
         
         <button class="btn-menu btn-cad" onclick="window.location.href='cadastro.html'">
-            📦 NOVO PRODUTO
+            📦 Cadastro de Produto
+        </button>
+
+        <button class="btn-menu btn-est" onclick="window.location.href='estoque.html'">
+            📦 Estoque
         </button>
 
         <button class="btn-menu btn-sair" onclick="window.location.href='index.html'">
-            🚪 SAIR DO SISTEMA
+            🚪 Sair
         </button>
     </div>
 

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estoque - Mercadinho</title>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb; --danger: #ef4444; --warning: #f59e0b;
+            --success: #10b981; --bg: #f8fafc; --white: #ffffff;
+            --text-main: #1e293b; --text-muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); padding-bottom: 20px; }
+        
+        header { background: var(--primary); color: white; padding: 1rem; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-back { text-decoration: none; color: white; font-size: 1.2rem; margin-right: 1rem; }
+        h1 { font-size: 1.1rem; font-weight: 600; }
+        
+        .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 56px; z-index: 99; }
+        .tab-btn { flex: 1; padding: 1rem; border: none; background: none; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        .content-section { display: none; padding: 1rem; }
+        .content-section.active { display: block; }
+        
+        .card { background: var(--white); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .status-vencido { background: #fee2e2; color: var(--danger); border: 1px solid var(--danger); }
+        .status-alerta { background: #fef3c7; color: var(--warning); border: 1px solid var(--warning); }
+        .status-ok { background: #dcfce7; color: var(--success); border: 1px solid var(--success); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="menu.html" class="btn-back">⬅️</a>
+        <h1>Estoque e Validades</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('estoque', this)">ESTOQUE</button>
+        <button class="tab-btn" onclick="switchTab('validades', this)">VALIDADES</button>
+    </div>
+
+    <section id="estoque" class="content-section active">
+        <div id="list-estoque">Carregando...</div>
+    </section>
+
+    <section id="validades" class="content-section">
+        <div id="list-validades">Carregando...</div>
+    </section>
+
+    <script>
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        async function fetchEstoque() {
+            // Ajustado para buscar produtos (vou usar 'estoque_minimo' como referência se saldo_atual não existir)
+            const { data, error } = await tabela_supabase.from('produtos').select('nome_produto, estoque_minimo');
+            if (error) return Swal.fire('Erro', error.message, 'error');
+            
+            document.getElementById('list-estoque').innerHTML = data.map(item => `
+                <div class="card">
+                    <h3>${item.nome_produto}</h3>
+                    <div class="badge status-ok">Mín: ${item.estoque_minimo}</div>
+                </div>
+            `).join('');
+        }
+
+        async function fetchValidades() {
+            // Certifique-se de que a relação foi criada no Supabase Dashboard para o join funcionar
+            const { data, error } = await tabela_supabase.from('prateleira_fisica').select(`
+                lote, quantidade, data_vencimento, produtos ( nome_produto )
+            `).order('data_vencimento', { ascending: true });
+
+            if (error) return Swal.fire('Erro', error.message, 'error');
+
+            const hoje = new Date();
+            document.getElementById('list-validades').innerHTML = data.map(item => {
+                const dataVenc = new Date(item.data_vencimento);
+                const diffDays = Math.ceil((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+                let status = diffDays < 0 ? 'status-vencido' : (diffDays <= 30 ? 'status-alerta' : 'status-ok');
+                
+                return `
+                    <div class="card">
+                        <div>
+                            <h3>${item.produtos?.nome_produto || 'Produto'}</h3>
+                            <p>Lote: ${item.lote} | Venc: ${item.data_vencimento}</p>
+                        </div>
+                        <div class="badge ${status}">${diffDays < 0 ? 'Vencido' : (diffDays <= 30 ? diffDays+' dias' : 'OK')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        fetchEstoque();
+        fetchValidades();
+    </script>
+</body>
+</html>
