@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cadastro de Produtos - Mercadinho</title>
+    
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- HTML5 QR Code (Leitor de Código de Barras) -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --bg: #f1f5f9;
+            --text: #1e293b;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--white);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Área do Scanner */
+        #reader {
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none; /* Inicialmente oculto */
+            border: 2px solid var(--primary);
+        }
+
+        .btn-scan {
+            width: 100%;
+            background-color: #64748b;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-save {
+            width: 100%;
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn-save:active {
+            transform: scale(0.98);
+        }
+
+        /* Feedback visual para scanner */
+        .scanning {
+            background-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Cadastro de Produto</h1>
+
+        <!-- Campo 1: Código de Barras -->
+        <div class="form-group">
+            <label for="codigo_barras">Código de Barras</label>
+            <input type="text" id="codigo_barras" placeholder="000000000000">
+            
+            <!-- Área da Câmera -->
+            <div id="reader"></div>
+            
+            <button type="button" class="btn-scan" id="btn-toggle-scan">
+                📸 ESCANEAR CÓDIGO
+            </button>
+        </div>
+
+        <!-- Campo 2: Nome -->
+        <div class="form-group">
+            <label for="nome">Nome do Produto</label>
+            <input type="text" id="nome" placeholder="Ex: Arroz 5kg">
+        </div>
+
+        <!-- Campo 3: Preço -->
+        <div class="form-group">
+            <label for="preco_venda">Preço de Venda (R$)</label>
+            <input type="number" id="preco_venda" step="0.01" placeholder="0.00">
+        </div>
+
+        <!-- Botão Salvar -->
+        <button class="btn-save" onclick="salvarProduto()">
+            💾 SALVAR PRODUTO
+        </button>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO SUPABASE ---
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- VARIÁVEIS DO SCANNER ---
+        let html5QrCode;
+        const scannerConfig = { fps: 10, qrbox: { width: 250, height: 150 } };
+        const readerDiv = document.getElementById('reader');
+        const btnScan = document.getElementById('btn-toggle-scan');
+        const inputCodigo = document.getElementById('codigo_barras');
+
+        // --- LÓGICA DO SCANNER ---
+        async function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            readerDiv.style.display = 'block';
+            btnScan.innerText = "🛑 PARAR CÂMERA";
+            btnScan.classList.add('scanning');
+
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    scannerConfig,
+                    (decodedText) => {
+                        // Sucesso na leitura
+                        inputCodigo.value = decodedText;
+                        beep();
+                        stopScanner();
+                    },
+                    (errorMessage) => { /* Silencioso para erros de busca frame a frame */ }
+                );
+            } catch (err) {
+                console.error("Erro ao iniciar câmera: ", err);
+                alert("Não foi possível acessar a câmera.");
+                stopScanner();
+            }
+        }
+
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                await html5QrCode.stop();
+            }
+            readerDiv.style.display = 'none';
+            btnScan.innerText = "📸 ESCANEAR CÓDIGO";
+            btnScan.classList.remove('scanning');
+        }
+
+        btnScan.addEventListener('click', () => {
+            if (readerDiv.style.display === 'none') {
+                startScanner();
+            } else {
+                stopScanner();
+            }
+        });
+
+        // Feedback sonoro/visual simples
+        function beep() {
+            // Vibração no celular se disponível
+            if (navigator.vibrate) navigator.vibrate(100);
+            // Feedback visual no input
+            inputCodigo.style.backgroundColor = "#dcfce7";
+            setTimeout(() => inputCodigo.style.backgroundColor = "", 500);
+        }
+
+        // --- LÓGICA DE BANCO DE DADOS ---
+        async function salvarProduto() {
+            const codigo = inputCodigo.value.trim();
+            const nome = document.getElementById('nome').value.trim();
+            const preco = document.getElementById('preco_venda').value;
+
+            // Validação simples
+            if (!codigo || !nome || !preco) {
+                alert("Por favor, preencha todos os campos!");
+                return;
+            }
+
+            try {
+                const { error } = await tabela_supabase
+                    .from('produtos')
+                    .insert([
+                        { 
+                            codigo_barras: codigo, 
+                            nome: nome, 
+                            preco_venda: parseFloat(preco) 
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert("✅ Produto cadastrado com sucesso!");
+                limparFormulario();
+
+            } catch (err) {
+                console.error("Erro ao salvar:", err);
+                alert("Erro ao salvar produto: " + err.message);
+            }
+        }
+
+        function limparFormulario() {
+            inputCodigo.value = "";
+            document.getElementById('nome').value = "";
+            document.getElementById('preco_venda').value = "";
+            if (readerDiv.style.display !== 'none') stopScanner();
+        }
+    </script>
+</body>
+</html>
