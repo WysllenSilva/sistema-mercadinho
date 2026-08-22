@@ -6,166 +6,98 @@
     <title>Menu Principal - Mercadinho</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
         :root {
-            --primary: #2563eb; 
-            --success: #16a34a; 
-            --danger: #dc2626;
-            --bg: #f8fafc; 
-            --text: #0f172a; 
-            --white: #ffffff;
-            --gray-light: #e2e8f0; 
-            --gray-dark: #475569;
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626;
+            --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
+            --gray-light: #e2e8f0; --admin-color: #7c3aed;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        
-        body { 
-            background-color: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            flex-direction: column; 
-            min-height: 100vh; 
-            padding: 20px; 
-            align-items: center; 
-        }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; padding: 20px; align-items: center; }
 
-        .app-title { 
-            font-size: 1.8rem; 
-            font-weight: 800; 
-            text-align: center; 
-            margin-bottom: 25px; 
-            margin-top: 10px; 
-            color: var(--text); 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
+        .app-title { font-size: 1.8rem; font-weight: 800; text-align: center; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
+        .user-welcome { font-size: 0.9rem; color: #64748b; margin-bottom: 25px; font-weight: 600; text-align: center; }
 
-        .menu-container { 
-            width: 100%; 
-            max-width: 500px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            flex: 1; 
-        }
+        .menu-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
-        /* Grade para 2 colunas */
-        .grid-2 { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-        }
-
-        /* Estilo base dos botões */
         .btn-menu { 
-            border: none; 
-            border-radius: 12px; 
-            padding: 20px 10px; 
-            font-size: 1.05rem; 
-            font-weight: 800; 
-            cursor: pointer; 
-            text-align: center; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
-            transition: transform 0.1s; 
-            text-decoration: none; 
-            color: white; 
+            border: none; border-radius: 12px; padding: 20px 10px; font-size: 1.05rem; font-weight: 800; 
+            cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            text-decoration: none; color: white; transition: transform 0.1s;
         }
-        
         .btn-menu:active { transform: scale(0.96); }
         .btn-menu i { font-size: 1.8rem; font-style: normal; }
 
-        /* Cores Específicas dos Botões */
         .btn-vender { background-color: var(--success); }
         .btn-historico { background-color: var(--gray-light); color: var(--text); }
-        .btn-acao { background-color: var(--primary); } /* Produtos, Estoque, Prateleira */
+        .btn-acao { background-color: var(--primary); } 
+        .btn-usuarios { background-color: var(--admin-color); grid-column: span 2; } /* Ocupa a largura inteira */
 
-        /* Linha Divisória Suave */
-        .divider { 
-            height: 2px; 
-            background-color: #cbd5e1; 
-            margin: 5px 0; 
-            border-radius: 2px; 
-        }
+        .divider { height: 2px; background-color: #cbd5e1; margin: 5px 0; border-radius: 2px; }
 
-        /* Botão Sair no Rodapé */
-        .footer-action { 
-            margin-top: auto; 
-            display: flex; 
-            justify-content: center; 
-            padding-top: 30px; 
-        }
-        
-        .btn-sair { 
-            background-color: var(--danger); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            padding: 12px 25px; 
-            font-size: 1rem; 
-            font-weight: 600; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: right;  
-            gap: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-        }
-        
-        .btn-sair:active { transform: scale(0.96); }
-
+        .footer-action { margin-top: auto; display: flex; justify-content: center; padding-top: 30px; }
+        .btn-sair { background-color: var(--danger); color: white; border: none; border-radius: 8px; padding: 12px 25px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
     <h1 class="app-title">MERCADINHO</h1>
+    <div id="welcome-msg" class="user-welcome">Carregando usuário...</div>
 
     <div class="menu-container">
-        <!-- BLOCO 1: OPERAÇÃO (Frente de Loja) -->
+        <!-- BLOCO 1: OPERAÇÃO -->
         <div class="grid-2">
-            <a href="vendas.html" class="btn-menu btn-vender">
-                <i>🛒</i>
-                VENDER
-            </a>
-            <a href="historico.html" class="btn-menu btn-historico">
-                <i>📄</i>
-                HISTÓRICO DE VENDA
-            </a>
+            <a href="vendas.html" class="btn-menu btn-vender"><i>🛒</i> VENDER</a>
+            <a href="historico.html" class="btn-menu btn-historico"><i>📄</i> HISTÓRICO</a>
         </div>
 
-        <!-- SEPARADOR -->
         <div class="divider"></div>
 
-        <!-- BLOCO 2: GESTÃO (Retaguarda) -->
-        <div class="grid-2">
-            <a href="produtos.html" class="btn-menu btn-acao">
-                <i>📦</i>
-                PRODUTOS
-            </a>
-            <a href="movimentacoes.html" class="btn-menu btn-acao">
-                <i>📥</i>
-                GESTÃO DO ESTOQUE
-            </a>
-            <a href="prateleira.html" class="btn-menu btn-acao">
-                <i>🏷️</i>
-                PRATELEIRA
-            </a>
-            <!-- Espaço vazio na grid para manter o alinhamento da esquerda -->
-            <div></div> 
+        <!-- BLOCO 2: GESTÃO -->
+        <div class="grid-2" id="grid-gestao">
+            <a href="produtos.html" class="btn-menu btn-acao"><i>📦</i> PRODUTOS</a>
+            <a href="movimentacoes.html" class="btn-menu btn-acao"><i>📥</i> ESTOQUE</a>
+            <a href="prateleira.html" class="btn-menu btn-acao"><i>🏷️</i> PRATELEIRA</a>
+            
+            <!-- BOTÃO DE USUÁRIOS (Inserido via JS apenas para Admins) -->
+            <div id="slot-usuarios"></div>
         </div>
     </div>
 
-    <!-- RODAPÉ -->
     <div class="footer-action">
-        <button class="btn-sair" onclick="window.location.href='index.html'">
-            ❌ SAIR
-        </button>
+        <button class="btn-sair" onclick="fazerLogout()">❌ SAIR</button>
     </div>
 
+    <script>
+        // Recupera o usuário logado do navegador
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuario_mercadinho'));
+
+        if (!usuarioLogado) {
+            // Se não estiver logado, manda de volta para o login (ajuste o nome se sua tela de login for index.html ou login.html)
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('welcome-msg').innerText = `Logado como: ${usuarioLogado.nome} (${usuarioLogado.perfil === 'adm_sistema' ? 'Administrador' : 'Colaborador'})`;
+
+            // SE FOR ADMIN, EXIBE O BOTÃO DE GESTÃO DE USUÁRIOS
+            if (usuarioLogado.perfil === 'adm_sistema') {
+                document.getElementById('slot-usuarios').innerHTML = `
+                    <a href="usuarios.html" class="btn-menu btn-usuarios">
+                        <i>👥</i> GERENCIAR USUÁRIOS E PERFIS
+                    </a>
+                `;
+            }
+        }
+
+        function fazerLogout() {
+            localStorage.removeItem('usuario_mercadinho');
+            window.location.href = 'index.html';
+        }
+    </script>
 </body>
 </html>

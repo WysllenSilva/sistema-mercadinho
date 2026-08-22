@@ -11,74 +11,26 @@
 
     <style>
         :root {
-            --primary: #2563eb; 
-            --success: #16a34a; 
-            --danger: #dc2626;
-            --bg: #f8fafc; 
-            --text: #0f172a; 
-            --white: #ffffff;
-            --muted: #64748b;
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626;
+            --bg: #f8fafc; --text: #0f172a; --white: #ffffff; --muted: #64748b;
         }
-        
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
         
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
         .btn-voltar { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; color: var(--text); text-decoration: none;}
-        .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .titulo-topo { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
         
-        main { flex: 1; overflow-y: auto; padding: 15px; }
+        main { flex: 1; overflow-y: auto; padding: 15px; max-width: 600px; width: 100%; margin: 0 auto; }
         
-        /* Barra de Filtro de Datas */
-        .filter-container {
-            background: var(--white);
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-        }
-        
+        .filter-container { background: var(--white); padding: 15px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
         .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
-        .filter-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Inter'; outline: none; }
-        .filter-group input:focus { border-color: var(--primary); }
+        .filter-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
         
-        .btn-filtrar { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 10px 15px; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            height: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .btn-filtrar:active { transform: scale(0.95); }
+        .btn-filtrar { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 38px; }
 
-        .loading { text-align: center; padding: 40px; color: var(--muted); font-weight: 600; }
-        .empty-state { text-align: center; padding: 40px; color: var(--muted); }
-        
-        /* Cartão de Venda */
-        .venda-card { 
-            background: var(--white); 
-            border-radius: 12px; 
-            padding: 15px; 
-            margin-bottom: 15px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-            border-left: 5px solid var(--primary);
-        }
-        
+        .venda-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; border-left: 5px solid var(--primary); }
         .venda-header { display: flex; justify-content: space-between; align-items: center; }
         .venda-data { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
         .badge-pgto { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
@@ -88,27 +40,15 @@
         .pgto-CARTÃO { background: #dbeafe; color: #1e40af; }
         
         .venda-body { display: flex; justify-content: space-between; align-items: flex-end; }
-        .venda-total { font-size: 1.5rem; font-weight: 900; color: var(--text); }
+        .venda-total { font-size: 1.4rem; font-weight: 900; }
         
-        .btn-detalhes { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 8px 15px; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            cursor: pointer; 
-        }
-        .btn-detalhes:active { transform: scale(0.95); }
+        .acoes-venda { display: flex; gap: 8px; }
+        .btn-detalhes { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .btn-cancelar { background: #fee2e2; color: var(--danger); border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
 
-        /* Estilos do Recibo (SweetAlert) */
         .recibo-container { text-align: left; font-size: 0.95rem; }
         .recibo-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding: 8px 0; }
-        .recibo-item:last-child { border-bottom: none; }
-        .recibo-nome { font-weight: 600; color: var(--text); }
-        .recibo-sub { font-size: 0.85rem; color: var(--muted); }
         .recibo-valor { font-weight: 800; }
-        .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
@@ -120,7 +60,6 @@
     </header>
 
     <main>
-        <!-- Barra de Filtros -->
         <div class="filter-container">
             <div class="filter-group">
                 <label>Data Inicial</label>
@@ -133,144 +72,148 @@
             <button class="btn-filtrar" onclick="carregarHistorico()">🔍 Filtrar</button>
         </div>
 
-        <div id="lista-vendas">
-            <div class="loading">Carregando histórico...</div>
-        </div>
+        <div id="lista-vendas"><div style="text-align:center; padding: 20px;">Carregando...</div></div>
     </main>
 
-<script>
+    <script>
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let vendasCarregadas = [];
 
-        // 1. Declaramos a função Global no topo absoluto para o PC não ignorá-la
-        window.abrirDetalhes = function(index) {
-            const venda = vendasCarregadas[index];
-            if (!venda || !venda.itens_venda) return;
-            
-            const itens = venda.itens_venda;
-            let reciboHTML = `<div class="recibo-container">`;
-            
-            itens.forEach(item => {
-                const nome = item.produtos ? item.produtos.nome_produto : 'Produto Excluído';
-                const subtotal = item.quantidade * item.preco_unitario;
-                
-                reciboHTML += `
-                    <div class="recibo-item">
-                        <div>
-                            <div class="recibo-nome">${nome}</div>
-                            <div class="recibo-sub">${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div>
-                        </div>
-                        <div class="recibo-valor">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
-                    </div>
-                `;
-            });
-            
-            reciboHTML += `</div>`;
-
-            const larguraPopup = window.innerWidth > 600 ? '400px' : '90%';
-
-            Swal.fire({
-                title: 'Detalhes da Venda',
-                html: reciboHTML,
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#475569',
-                width: larguraPopup
-            });
-        };
-
-        // 2. Preenche os inputs de data automaticamente (Hoje e 7 dias atrás)
         function inicializarFiltros() {
             const hoje = new Date();
             const seteDiasAtras = new Date();
             seteDiasAtras.setDate(hoje.getDate() - 7);
-
-            const formataData = (data) => {
-                const ano = data.getFullYear();
-                const mes = String(data.getMonth() + 1).padStart(2, '0');
-                const dia = String(data.getDate()).padStart(2, '0');
-                return `${ano}-${mes}-${dia}`;
-            };
-
-            document.getElementById('data_inicio').value = formataData(seteDiasAtras);
-            document.getElementById('data_fim').value = formataData(hoje);
+            
+            const formata = d => d.toISOString().split('T')[0];
+            document.getElementById('data_inicio').value = formata(seteDiasAtras);
+            document.getElementById('data_fim').value = formata(hoje);
         }
 
-        // 3. Busca no Banco
         async function carregarHistorico() {
             try {
-                document.getElementById('lista-vendas').innerHTML = `<div class="loading">Buscando vendas...</div>`;
-
-                const strInicio = document.getElementById('data_inicio').value;
-                const strFim = document.getElementById('data_fim').value;
-
-                if (!strInicio || !strFim) {
-                    Swal.fire('Atenção', 'Preencha as duas datas!', 'warning');
-                    return;
-                }
-
-                const start = new Date(`${strInicio}T00:00:00`).toISOString();
-                const end = new Date(`${strFim}T23:59:59`).toISOString();
+                const start = new Date(`${document.getElementById('data_inicio').value}T00:00:00`).toISOString();
+                const end = new Date(`${document.getElementById('data_fim').value}T23:59:59`).toISOString();
 
                 const { data, error } = await tabela_supabase
                     .from('vendas')
-                    .select(`
-                        id, 
-                        valor_total, 
-                        forma_pagamento, 
-                        data_venda,
-                        itens_venda (
-                            quantidade,
-                            preco_unitario,
-                            produtos ( nome_produto )
-                        )
-                    `)
-                    .gte('data_venda', start)
-                    .lte('data_venda', end)
-                    .order('data_venda', { ascending: false }); 
+                    .select(`id, valor_total, forma_pagamento, data_venda, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
+                    .gte('data_venda', start).lte('data_venda', end)
+                    .order('data_venda', { ascending: false });
 
                 if (error) throw error;
-
-                vendasCarregadas = data;
+                vendasCarregadas = data || [];
                 renderizarVendas();
-
             } catch (err) {
                 console.error(err);
-                document.getElementById('lista-vendas').innerHTML = `<div class="empty-state">Erro ao carregar histórico.</div>`;
             }
         }
 
-        // 4. Renderiza na tela
         function renderizarVendas() {
             const container = document.getElementById('lista-vendas');
-            
             if (vendasCarregadas.length === 0) {
-                container.innerHTML = `<div class="empty-state">Nenhuma venda encontrada neste período.</div>`;
+                container.innerHTML = `<div style="text-align:center; padding: 20px; color: #64748b;">Nenhuma venda encontrada.</div>`;
                 return;
             }
 
-            container.innerHTML = vendasCarregadas.map((venda, index) => {
-                const dataObj = new Date(venda.data_venda);
-                const dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' às ' + dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                const valorFormatado = "R$ " + venda.valor_total.toFixed(2).replace('.', ',');
-                const classePgto = `pgto-${venda.forma_pagamento.toUpperCase()}`;
-
+            container.innerHTML = vendasCarregadas.map((v, i) => {
+                const dataF = new Date(v.data_venda).toLocaleString('pt-BR');
                 return `
                     <div class="venda-card">
                         <div class="venda-header">
-                            <span class="venda-data">${dataFormatada}</span>
-                            <span class="badge-pgto ${classePgto}">${venda.forma_pagamento}</span>
+                            <span class="venda-data">${dataF}</span>
+                            <span class="badge-pgto pgto-${v.forma_pagamento}">${v.forma_pagamento}</span>
                         </div>
                         <div class="venda-body">
-                            <span class="venda-total">${valorFormatado}</span>
-                            <!-- Chamada direta para a função global -->
-                            <button class="btn-detalhes" onclick="window.abrirDetalhes(${index})">🛒 Ver Itens</button>
+                            <span class="venda-total">R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span>
+                            <div class="acoes-venda">
+                                <button class="btn-detalhes" onclick="abrirDetalhes(${i})">🛒 Itens</button>
+                                <button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️ Cancelar</button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        window.abrirDetalhes = function(i) {
+            const v = vendasCarregadas[i];
+            let html = `<div class="recibo-container">`;
+            v.itens_venda.forEach(item => {
+                const nome = item.produtos ? item.produtos.nome_produto : 'Item';
+                html += `<div class="recibo-item"><div><b>${nome}</b><br>${item.quantidade}x R$ ${item.preco_unitario.toFixed(2)}</div><div class="recibo-valor">R$ ${(item.quantidade*item.preco_unitario).toFixed(2)}</div></div>`;
+            });
+            html += `</div>`;
+            Swal.fire({ title: 'Itens da Venda', html, width: '90%' });
+        };
+
+        // --- EXCLUSÃO / ESTORNO RESTRITO A ADMINISTRADOR ---
+        async function cancelarVenda(vendaId) {
+            // Pede o PIN do Administrador
+            const { value: pinDigitado } = await Swal.fire({
+                title: 'Restrito a Administrador',
+                text: 'Digite o PIN de acesso do Administrador para cancelar esta venda:',
+                input: 'password',
+                inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                showCancelButton: true,
+                confirmButtonText: 'Validar PIN',
+                confirmButtonColor: '#dc2626'
+            });
+
+            if (!pinDigitado) return;
+
+            Swal.fire({ title: 'Verificando permissão...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                // Valida no banco se existe um Admin com esse PIN
+                const { data: adminUser, error: errAdmin } = await tabela_supabase
+                    .from('usuarios')
+                    .select('nome')
+                    .eq('pin_senha', pinDigitado)
+                    .eq('perfil', 'adm_sistema')
+                    .maybeSingle();
+
+                if (errAdmin || !adminUser) {
+                    throw new Error('PIN inválido ou usuário sem privilégios de Administrador!');
+                }
+
+                Swal.fire({ title: 'Estornando venda e estoque...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                // Pega os itens da venda para devolver à prateleira física
+                const vendaAlvo = vendasCarregadas.find(v => v.id === vendaId);
+                
+                if (vendaAlvo && vendaAlvo.itens_venda) {
+                    for (const item of vendaAlvo.itens_venda) {
+                        // Devolve a quantidade para a prateleira (cria um lote de estorno)
+                        await tabela_supabase.from('prateleira_fisica').insert([{
+                            produto_id: item.produto_id,
+                            lote: 'ESTORNO_VENDA',
+                            quantidade: item.quantidade,
+                            data_vencimento: '2099-12-31'
+                        }]);
+
+                        // Registra a movimentação de auditoria
+                        await tabela_supabase.from('movimentacoes_estoque').insert([{
+                            produto_id: item.produto_id,
+                            tipo: 'ENTRADA',
+                            quantidade: item.quantidade,
+                            motivo: `Cancelamento de Venda por ${adminUser.nome}`
+                        }]);
+                    }
+                }
+
+                // Apaga a venda do banco (itens_venda apagam sozinhos por causa do CASCADE)
+                const { error: errDel } = await tabela_supabase.from('vendas').delete().eq('id', vendaId);
+                if (errDel) throw errDel;
+
+                Swal.fire({ title: 'Venda Cancelada!', text: 'O estoque foi estornado com sucesso.', icon: 'success', timer: 2000, showConfirmButton: false });
+                carregarHistorico();
+
+            } catch (err) {
+                Swal.fire('Acesso Negado', err.message, 'error');
+            }
         }
 
         inicializarFiltros();
