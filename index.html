@@ -7,6 +7,9 @@
     
     <!-- Biblioteca Oficial do Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- SweetAlert2 (Pop-ups bonitos) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         /* Estilização focada em Acessibilidade e Alto Contraste */
@@ -190,14 +193,26 @@
     }
 
     // --- 3. LÓGICA DE LOGIN ---
-    async function validarAcesso() {
+    async function validarAcesso() 
+    {
+
         if (pinDigitado === "") {
-            alert("Por favor, digite a senha.");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atenção',
+                text: 'Por favor, digite a senha.',
+                confirmButtonColor: '#2563eb'
+            });
             return;
         }
 
         if (!tabela_supabase) {
-            alert("Erro crítico: Banco de dados inoperante. Verifique sua conexão.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro Crítico',
+                text: 'Banco de dados inoperante. Verifique sua conexão.',
+                confirmButtonColor: '#dc2626'
+            });
             return;
         }
 
@@ -212,10 +227,15 @@
                 .single();
 
             if (error || !data) {
-                alert("SENHA INCORRETA!");
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ops!',
+                    text: 'SENHA INCORRETA!',
+                    confirmButtonColor: '#dc2626'
+                });
                 limpar();
             } else {
-                alert("ACESSO LIBERADO!\nBem-vindo(a), " + data.nome);
+                // Vai direto para o menu sem avisar
                 window.location.href = "menu.html";
             }
         } catch (err) {
