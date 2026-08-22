@@ -6,6 +6,11 @@
     <title>PDV Mobile - Gestão de Mercadinho</title>
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- HTML5 QR Code (Leitor de Código de Barras) -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- SweetAlert2 (Pop-ups bonitos) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
         :root {
             --primary: #2563eb;
@@ -27,12 +32,28 @@
             overflow: hidden;
         }
 
-        /* Topo: Busca */
+        /* Topo: Busca e Câmera */
         header {
             background: var(--white);
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             z-index: 10;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-voltar {
+            background: #e2e8f0;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         .search-container {
@@ -49,10 +70,8 @@
             outline: none;
         }
 
-        input#search-input:focus { border-color: var(--primary); }
-
         .btn-search {
-            padding: 0 25px;
+            padding: 0 20px;
             font-size: 1.1rem;
             font-weight: bold;
             background: var(--primary);
@@ -60,6 +79,29 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
+        }
+
+        .btn-camera {
+            padding: 0 15px;
+            font-size: 1.5rem;
+            background: #475569;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Área do Scanner */
+        #reader-container {
+            display: none;
+            margin-top: 10px;
+        }
+        
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid var(--primary);
         }
 
         /* Meio: Carrinho */
@@ -140,23 +182,30 @@
         .btn-card { background-color: var(--primary); }
         .btn-cash { background-color: var(--success); }
 
-        /* Estado Vazio */
-        .empty-cart {
-            text-align: center;
-            margin-top: 50px;
-            color: #94a3b8;
-            font-size: 1.2rem;
-        }
+        .empty-cart { text-align: center; margin-top: 50px; color: #94a3b8; font-size: 1.2rem; }
+        .btn-pay:active, .btn-search:active, .btn-camera:active { transform: scale(0.95); }
 
-        .btn-pay:active, .btn-search:active { transform: scale(0.95); }
+        /* Estilo Customizado SweetAlert2 */
+        .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
 
     <header>
+        <div class="header-top">
+            <button class="btn-voltar" onclick="window.location.href='menu.html'">⬅️ Voltar</button>
+            <span style="font-weight: bold; font-size: 1.2rem;">FRENTE DE CAIXA</span>
+            <div style="width: 70px;"></div> <!-- Espaçador para centralizar título -->
+        </div>
+
         <div class="search-container">
-            <input type="text" id="search-input" placeholder="Produto ou Cód. Barras" autocomplete="off">
-            <button class="btn-search" onclick="searchProduct()">BUSCAR</button>
+            <input type="text" id="search-input" placeholder="Cód. Barras ou Nome" autocomplete="off">
+            <button class="btn-camera" id="btn-toggle-scan" onclick="toggleScanner()">📸</button>
+            <button class="btn-search" onclick="searchProduct()">OK</button>
+        </div>
+
+        <div id="reader-container">
+            <div id="reader"></div>
         </div>
     </header>
 
@@ -181,37 +230,83 @@
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
 
-        // AQUI ESTÁ A SUA VARIÁVEL CUSTOMIZADA
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ESTADO DA APLICAÇÃO
         let dbProducts = [];
         let cart = [];
+        let html5QrCode;
 
         // INICIALIZAÇÃO
         async function loadApp() {
-            const { data, error } = await tabela_supabase
-                .from('produtos')
-                .select('*');
-            
+            const { data, error } = await tabela_supabase.from('produtos').select('*');
             if (error) {
                 console.error('Erro ao carregar catálogo:', error);
-                alert('Erro ao conectar com o banco de dados.');
+                Swal.fire('Erro', 'Falha ao conectar com banco de dados.', 'error');
             } else {
                 dbProducts = data;
             }
         }
 
-        // BUSCA E ADIÇÃO
+        // --- LÓGICA DO SCANNER (CÂMERA) ---
+        function toggleScanner() {
+            const container = document.getElementById('reader-container');
+            if (container.style.display === 'block') {
+                stopScanner();
+            } else {
+                startScanner();
+            }
+        }
+
+        async function startScanner() {
+            const container = document.getElementById('reader-container');
+            const btnCam = document.getElementById('btn-toggle-scan');
+            
+            html5QrCode = new Html5Qrcode("reader");
+            container.style.display = 'block';
+            btnCam.style.backgroundColor = '#ef4444'; // Fica vermelho para indicar que está gravando
+            btnCam.innerText = "🛑";
+
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        // Quando ler um código:
+                        if (navigator.vibrate) navigator.vibrate(100); // Vibra
+                        document.getElementById('search-input').value = decodedText; // Preenche
+                        stopScanner(); // Fecha câmera
+                        searchProduct(); // Busca e adiciona direto no carrinho!
+                    },
+                    (errorMessage) => { }
+                );
+            } catch (err) {
+                console.error("Erro na câmera: ", err);
+                Swal.fire('Câmera', 'Não foi possível acessar a câmera.', 'warning');
+                stopScanner();
+            }
+        }
+
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                await html5QrCode.stop();
+            }
+            document.getElementById('reader-container').style.display = 'none';
+            const btnCam = document.getElementById('btn-toggle-scan');
+            btnCam.style.backgroundColor = '#475569';
+            btnCam.innerText = "📸";
+        }
+
+        // --- BUSCA E CARRINHO ---
         function searchProduct() {
             const input = document.getElementById('search-input');
             const query = input.value.toLowerCase().trim();
-            
             if (!query) return;
 
+            // Busca produto (Usa nome_produto conforme corrigido)
             const product = dbProducts.find(p => 
                 p.codigo_barras === query || 
-                p.nome_produto.toLowerCase().includes(query)
+                (p.nome_produto && p.nome_produto.toLowerCase().includes(query))
             );
 
             if (product) {
@@ -219,20 +314,25 @@
                 input.value = '';
                 input.focus();
             } else {
-                alert('Produto não encontrado!');
+                Swal.fire({
+                    title: 'Não Encontrado',
+                    text: 'O produto não está cadastrado.',
+                    icon: 'warning',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         }
 
         function addToCart(product) {
             const existing = cart.find(item => item.id === product.id);
-            
             if (existing) {
                 existing.quantidade += 1;
             } else {
                 cart.push({
                     id: product.id,
-                    nome: product.nome_produto,
-                    preco: product.preco_venda || product.preco,
+                    nome: product.nome_produto, // Correção aplicada aqui também
+                    preco: product.preco_venda || 0,
                     quantidade: 1
                 });
             }
@@ -244,7 +344,6 @@
             renderCart();
         }
 
-        // RENDERIZAÇÃO
         function renderCart() {
             const cartContainer = document.getElementById('cart-items');
             const totalDisplay = document.getElementById('total-amount');
@@ -259,7 +358,7 @@
             cartContainer.innerHTML = '';
 
             cart.forEach((item, index) => {
-                const precoFormatado = item.preco ? item.preco.toFixed(2) : "0.00";
+                const precoFormatado = item.preco ? item.preco.toFixed(2).replace('.', ',') : "0,00";
                 const subtotal = (item.preco || 0) * item.quantidade;
                 total += subtotal;
 
@@ -267,40 +366,37 @@
                     <div class="cart-item">
                         <div class="item-info">
                             <h3>${item.nome}</h3>
-                            <p>${item.quantidade}x R$ ${precoFormatado} | <strong>R$ ${subtotal.toFixed(2)}</strong></p>
+                            <p>${item.quantidade}x R$ ${precoFormatado} | <strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></p>
                         </div>
                         <button class="btn-remove" onclick="removeFromCart(${index})">X</button>
                     </div>
                 `;
             });
 
-            totalDisplay.innerText = `R$ ${total.toFixed(2)}`;
+            totalDisplay.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
         }
 
-        // FINALIZAÇÃO DA VENDA
+        // --- FINALIZAÇÃO ---
         async function finishSale(method) {
             if (cart.length === 0) {
-                alert('O carrinho está vazio!');
+                Swal.fire('Vazio', 'Adicione produtos antes de finalizar.', 'info');
                 return;
             }
 
             const totalVenda = cart.reduce((acc, item) => acc + ((item.preco || 0) * item.quantidade), 0);
 
             try {
-                // 1. Inserir na tabela 'vendas'
+                // 1. Salva Venda
                 const { data: vendaData, error: vendaError } = await tabela_supabase
                     .from('vendas')
-                    .insert([{ 
-                        valor_total: totalVenda, 
-                        forma_pagamento: method 
-                    }])
+                    .insert([{ valor_total: totalVenda, forma_pagamento: method }])
                     .select();
 
                 if (vendaError) throw vendaError;
 
                 const vendaId = vendaData[0].id;
 
-                // 2. Preparar itens para 'itens_venda'
+                // 2. Salva Itens
                 const itensParaInserir = cart.map(item => ({
                     venda_id: vendaId,
                     produto_id: item.id,
@@ -308,33 +404,33 @@
                     preco_unitario: item.preco
                 }));
 
-                // 3. Inserir todos os itens
-                const { error: itensError } = await tabela_supabase
-                    .from('itens_venda')
-                    .insert(itensParaInserir);
-
+                const { error: itensError } = await tabela_supabase.from('itens_venda').insert(itensParaInserir);
                 if (itensError) throw itensError;
 
-                // Sucesso
-                alert('VENDA FINALIZADA COM SUCESSO!\nForma: ' + method);
+                // Sucesso com pop-up bonito que fecha sozinho!
+                Swal.fire({
+                    title: 'Venda Concluída!',
+                    text: 'Forma: ' + method,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
                 cart = [];
                 renderCart();
 
             } catch (error) {
-                console.error('Erro na transação:', error);
-                alert('Erro ao processar venda: ' + error.message);
+                console.error('Erro:', error);
+                Swal.fire('Erro', 'Falha ao gravar a venda no banco.', 'error');
             }
         }
 
+        // Enter no teclado busca
         document.getElementById('search-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                searchProduct();
-            }
+            if (e.key === 'Enter') searchProduct();
         });
 
-        // Início
         loadApp();
-
     </script>
 </body>
 </html>
