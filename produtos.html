@@ -30,6 +30,9 @@
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
         input:focus, select:focus { border-color: var(--primary); }
         
+        .grid-cat { display: flex; gap: 8px; }
+        .btn-add-cat { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 15px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .grid-3 label { font-size: 0.85rem; }
 
@@ -40,7 +43,6 @@
         .btn-acao { width: 100%; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1.1rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-save { background-color: var(--success); }
         .btn-update { background-color: var(--primary); }
-        .btn-delete { background-color: #fee2e2; color: var(--danger); border: 1px solid var(--danger); font-size: 1rem; margin-top: 10px; }
 
         .acoes-container { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
 
@@ -61,7 +63,6 @@
             <!-- BLOCO DE LEITURA -->
             <div class="form-group">
                 <label for="codigo_barras">Código de Barras (EAN)</label>
-                <!-- Alterado para oninput e onchange para aceitar digitação e enter/perda de foco -->
                 <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
                 
                 <div id="reader"></div>
@@ -77,16 +78,12 @@
 
                 <div class="form-group">
                     <label for="categoria">Categoria</label>
-                    <select id="categoria">
-                        <option value="">Selecione...</option>
-                        <option value="Mercearia">Mercearia</option>
-                        <option value="Higiene e Perfumaria">Higiene e Perfumaria</option>
-                        <option value="Limpeza">Limpeza</option>
-                        <option value="Bebidas">Bebidas</option>
-                        <option value="Frios e Laticínios">Frios e Laticínios</option>
-                        <option value="Hortifruti">Hortifruti</option>
-                        <option value="Outros">Outros</option>
-                    </select>
+                    <div class="grid-cat">
+                        <select id="categoria" style="flex: 1;">
+                            <option value="">Carregando categorias...</option>
+                        </select>
+                        <button type="button" class="btn-add-cat" onclick="adicionarNovaCategoria()" title="Adicionar Nova Categoria">+</button>
+                    </div>
                 </div>
 
                 <!-- MATEMÁTICA DE PREÇOS -->
@@ -112,10 +109,6 @@
 
                 <div class="acoes-container" id="box-btn-editar" style="display: none;">
                     <button class="btn-acao btn-update" onclick="salvarProduto()">🔄 ATUALIZAR PRODUTO</button>
-                    
-                    <!-- BOTÃO DE EXCLUSÃO OCULTO (COMENTADO A PEDIDO) 
-                    <button class="btn-acao btn-delete" onclick="excluirProduto()">🗑️ EXCLUIR DEFINITIVAMENTE</button>
-                    -->
                 </div>
             </div>
         </div>
@@ -134,13 +127,57 @@
         const boxForm = document.getElementById('form-detalhes');
         const boxNovo = document.getElementById('box-btn-novo');
         const boxEditar = document.getElementById('box-btn-editar');
+        const selectCategoria = document.getElementById('categoria');
 
-        // Dispara a busca automaticamente se o código digitado tiver 8 ou mais dígitos
+        // --- CARREGA CATEGORIAS DO BANCO AO ABRIR ---
+        async function carregarCategorias(categoriaSelecionada = "") {
+            try {
+                const { data, error } = await tabela_supabase
+                    .from('categorias')
+                    .select('nome')
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                selectCategoria.innerHTML = `<option value="">Selecione a categoria...</option>` + 
+                    data.map(cat => `<option value="${cat.nome}" ${cat.nome === categoriaSelecionada ? 'selected' : ''}>${cat.nome}</option>`).join('');
+            } catch (err) {
+                console.error("Erro ao carregar categorias:", err);
+            }
+        }
+
+        // --- CRIAR NOVA CATEGORIA DINAMICAMENTE ---
+        async function adicionarNovaCategoria() {
+            const { value: novaCat } = await Swal.fire({
+                title: 'Nova Categoria',
+                input: 'text',
+                inputPlaceholder: 'Ex: Frios, Açougue...',
+                showCancelButton: true,
+                confirmButtonText: 'Salvar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (novaCat && novaCat.trim() !== "") {
+                const nomeFormatado = novaCat.trim();
+                
+                const { error } = await tabela_supabase
+                    .from('categorias')
+                    .insert([{ nome: nomeFormatado }]);
+
+                if (error) {
+                    Swal.fire('Erro', 'Esta categoria já existe ou falhou ao salvar.', 'error');
+                } else {
+                    Swal.fire({ title: 'Adicionada!', icon: 'success', timer: 1200, showConfirmButton: false });
+                    await carregarCategorias(nomeFormatado); // Recarrega e já seleciona a nova
+                }
+            }
+        }
+
         function checarDigitacao(ean) {
             if (ean.length >= 8) {
                 buscarProdutoAPI(ean);
             } else {
-                boxForm.style.display = 'none'; // Esconde se apagar o código
+                boxForm.style.display = 'none'; 
             }
         }
 
@@ -196,7 +233,7 @@
                 if (prodLocal) {
                     produtoExistenteId = prodLocal.id;
                     document.getElementById('nome').value = prodLocal.nome_produto || "";
-                    document.getElementById('categoria').value = prodLocal.categoria || "";
+                    await carregarCategorias(prodLocal.categoria || ""); // Carrega e seleciona a salva
                     document.getElementById('preco_custo').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
                     document.getElementById('porcentagem_lucro').value = prodLocal.porcentagem_lucro || "";
                     document.getElementById('preco_venda').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
@@ -208,6 +245,8 @@
                     boxNovo.style.display = 'flex';
                     boxEditar.style.display = 'none';
                     
+                    await carregarCategorias("");
+
                     const response = await fetch(`https://br.openfoodfacts.org/api/v0/product/${ean}.json`);
                     const data = await response.json();
 
@@ -218,7 +257,6 @@
                         document.getElementById('nome').placeholder = "Não catalogado. Digite o nome.";
                     }
                     
-                    document.getElementById('categoria').value = "";
                     document.getElementById('preco_custo').value = "";
                     document.getElementById('porcentagem_lucro').value = "";
                     document.getElementById('preco_venda').value = "";
@@ -231,7 +269,7 @@
         async function salvarProduto() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome').value.trim();
-            const categoria = document.getElementById('categoria').value;
+            const categoria = selectCategoria.value;
             const custo = parseValor(document.getElementById('preco_custo').value);
             const lucro = parseFloat(document.getElementById('porcentagem_lucro').value) || 0;
             const venda = parseValor(document.getElementById('preco_venda').value);
@@ -267,32 +305,6 @@
             }
         }
 
-        // Função de exclusão mantida no código (mas o botão está comentado no HTML)
-        async function excluirProduto() {
-            if (!produtoExistenteId) return;
-
-            const confirmacao = await Swal.fire({
-                title: 'Tem Certeza?',
-                text: "Você deseja apagar este produto do catálogo?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc2626',
-                cancelButtonColor: '#475569',
-                confirmButtonText: 'Sim, Apagar!'
-            });
-
-            if (!confirmacao.isConfirmed) return;
-
-            try {
-                const { error } = await tabela_supabase.from('produtos').delete().eq('id', produtoExistenteId);
-                if (error) throw error;
-                Swal.fire({ title: 'Apagado!', text: 'O produto foi removido.', icon: 'success', timer: 2000, showConfirmButton: false });
-                limparFormulario();
-            } catch (err) {
-                Swal.fire('Ação Bloqueada', 'Não é possível excluir produtos que já possuem histórico de vendas ou estoque.', 'error');
-            }
-        }
-
         function limparFormulario() {
             document.getElementById('codigo_barras').value = "";
             produtoExistenteId = null;
@@ -324,6 +336,9 @@
             readerDiv.style.display = 'none';
             btnScan.innerHTML = "📸 ESCANEAR CÓDIGO";
         }
+
+        // Carrega as categorias ao abrir a tela pela primeira vez
+        carregarCategorias();
     </script>
 </body>
 </html>
