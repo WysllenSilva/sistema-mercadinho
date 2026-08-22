@@ -7,9 +7,9 @@
     
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <!-- HTML5 QR Code (Leitor de Código de Barras) -->
+    <!-- HTML5 QR Code -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- SweetAlert2 (Pop-ups bonitos) -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -22,12 +22,7 @@
             --white: #ffffff;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
 
         body {
             background-color: var(--bg);
@@ -38,7 +33,6 @@
             overflow: hidden;
         }
 
-        /* Topo Unificado */
         header {
             background: var(--white);
             padding: 15px;
@@ -70,7 +64,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Área do Formulário com Rolagem */
         main {
             flex: 1;
             overflow-y: auto;
@@ -153,15 +146,6 @@
             cursor: pointer;
             margin-top: 10px;
             box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
-            transition: transform 0.1s;
-        }
-
-        .btn-save:active, .btn-scan:active, .btn-voltar-topo:active {
-            transform: scale(0.98);
-        }
-
-        .scanning {
-            background-color: #ef4444 !important;
         }
 
         .swal2-popup { border-radius: 15px !important; }
@@ -169,63 +153,79 @@
 </head>
 <body>
 
-    <!-- Cabeçalho Integrado -->
     <header>
-        <button class="btn-voltar-topo" onclick="window.location.href='menu.html'" title="Voltar ao Menu">
-            ⬅️
-        </button>
+        <button class="btn-voltar-topo" onclick="window.location.href='menu.html'" title="Voltar ao Menu">⬅️</button>
         <span class="titulo-topo">Cadastro de Produtos</span>
-        <div style="width: 45px;"></div> <!-- Espaçador para equilibrar o layout -->
+        <div style="width: 45px;"></div>
     </header>
 
     <main>
         <div class="container">
-            <!-- Campo 1: Código de Barras -->
             <div class="form-group">
                 <label for="codigo_barras">Código de Barras (EAN)</label>
-                <input type="text" id="codigo_barras" placeholder="Ex: 7896094919662">
+                <input type="text" id="codigo_barras" placeholder="Ex: 7891024037973" onchange="buscarProdutoAPI(this.value)">
                 
                 <div id="reader"></div>
                 
-                <button type="button" class="btn-scan" id="btn-toggle-scan">
-                    📸 ESCANEAR CÓDIGO
-                </button>
+                <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR CÓDIGO</button>
             </div>
 
-            <!-- Campo 2: Nome -->
             <div class="form-group">
-                <label for="nome">Nome do Produto</label>
-                <input type="text" id="nome" placeholder="Ex: Farinha de Mandioca 1kg">
+                <label for="nome">Nome do Produto (Editável)</label>
+                <input type="text" id="nome" placeholder="Nome carregará automaticamente ou digite">
             </div>
 
-            <!-- Campo 3: Preço -->
             <div class="form-group">
                 <label for="preco_venda">Preço de Venda (R$)</label>
                 <input type="text" id="preco_venda" placeholder="R$ 0,00" onkeyup="formatarMoeda(this)">
             </div>
 
-            <!-- Botão Salvar -->
-            <button class="btn-save" onclick="salvarProduto()">
-                💾 SALVAR PRODUTO
-            </button>
+            <button class="btn-save" onclick="salvarProduto()">💾 SALVAR PRODUTO</button>
         </div>
     </main>
 
     <script>
-        // --- CONFIGURAÇÃO SUPABASE ---
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5IisoImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         
-        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Correção de segurança da chave anon caso tenha quebrado na cópia
+        const supabaseKeyCorrigida = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, supabaseKeyCorrigida);
 
-        // --- VARIÁVEIS DO SCANNER ---
         let html5QrCode;
-        const scannerConfig = { fps: 10, qrbox: { width: 250, height: 150 } };
         const readerDiv = document.getElementById('reader');
         const btnScan = document.getElementById('btn-toggle-scan');
         const inputCodigo = document.getElementById('codigo_barras');
+        const inputNome = document.getElementById('nome');
 
-        // --- LÓGICA DO SCANNER ---
+        // --- BUSCA AUTOMÁTICA NA API PÚBLICA DE EAN ---
+        async function buscarProdutoAPI(ean) {
+            if (!ean || ean.length < 8) return;
+            
+            // Feedback visual leve enquanto busca
+            inputNome.placeholder = "Buscando nome do produto na base global...";
+
+            try {
+                const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ean}.json`);
+                const data = await response.json();
+
+                if (data.status === 1 && data.product) {
+                    const nomeEncontrado = data.product.product_name_pt || data.product.product_name || "";
+                    if (nomeEncontrado) {
+                        inputNome.value = nomeEncontrado; // Preenche mantendo totalmente editável
+                    } else {
+                        inputNome.placeholder = "Não encontrado na base. Digite o nome.";
+                    }
+                } else {
+                    inputNome.placeholder = "Produto não catalogado. Digite manualmente.";
+                }
+            } catch (err) {
+                console.log("Erro ao buscar na API externa:", err);
+                inputNome.placeholder = "Erro na consulta online. Digite o nome.";
+            }
+        }
+
+        // --- SCANNER ---
         async function startScanner() {
             html5QrCode = new Html5Qrcode("reader");
             readerDiv.style.display = 'block';
@@ -235,17 +235,16 @@
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    scannerConfig,
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
                     (decodedText) => {
                         inputCodigo.value = decodedText;
-                        beep();
+                        if (navigator.vibrate) navigator.vibrate(100);
                         stopScanner();
+                        buscarProdutoAPI(decodedText); // Dispara a busca automática assim que lê!
                     },
                     (errorMessage) => { }
                 );
             } catch (err) {
-                console.error("Erro ao iniciar câmera: ", err);
-                Swal.fire('Câmera', 'Não foi possível acessar a câmera.', 'warning');
                 stopScanner();
             }
         }
@@ -260,20 +259,10 @@
         }
 
         btnScan.addEventListener('click', () => {
-            if (readerDiv.style.display === 'none') {
-                startScanner();
-            } else {
-                stopScanner();
-            }
+            if (readerDiv.style.display === 'none') startScanner();
+            else stopScanner();
         });
 
-        function beep() {
-            if (navigator.vibrate) navigator.vibrate(100);
-            inputCodigo.style.backgroundColor = "#dcfce7";
-            setTimeout(() => inputCodigo.style.backgroundColor = "", 500);
-        }
-
-        // --- FORMATAÇÃO DE MOEDA ---
         function formatarMoeda(elemento) {
             let valor = elemento.value.replace(/\D/g, "");
             valor = (valor / 100).toFixed(2) + "";
@@ -282,14 +271,13 @@
             elemento.value = valor === "0,00" ? "" : "R$ " + valor;
         }
 
-        // --- LÓGICA DE BANCO DE DADOS ---
         async function salvarProduto() {
             const codigo = inputCodigo.value.trim();
-            const nome = document.getElementById('nome').value.trim();
+            const nome = inputNome.value.trim();
             let precoTexto = document.getElementById('preco_venda').value;
 
             if (!codigo || !nome || !precoTexto) {
-                Swal.fire('Atenção', 'Por favor, preencha todos os campos!', 'warning');
+                Swal.fire('Atenção', 'Preencha todos os campos antes de salvar!', 'warning');
                 return;
             }
 
@@ -298,36 +286,22 @@
             try {
                 const { error } = await tabela_supabase
                     .from('produtos')
-                    .insert([
-                        { 
-                            codigo_barras: codigo, 
-                            nome_produto: nome, 
-                            preco_venda: precoNumero 
-                        }
-                    ]);
+                    .insert([{ codigo_barras: codigo, nome_produto: nome, preco_venda: precoNumero }]);
 
                 if (error) throw error;
 
-                Swal.fire({
-                    title: 'Sucesso!',
-                    text: 'Produto cadastrado com sucesso!',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-
+                Swal.fire({ title: 'Sucesso!', text: 'Produto cadastrado!', icon: 'success', timer: 1500, showConfirmButton: false });
                 limparFormulario();
-
             } catch (err) {
-                console.error("Erro ao salvar:", err);
-                Swal.fire('Erro', 'Falha ao salvar produto: ' + err.message, 'error');
+                Swal.fire('Erro', 'Falha ao salvar: ' + err.message, 'error');
             }
         }
 
         function limparFormulario() {
             inputCodigo.value = "";
-            document.getElementById('nome').value = "";
+            inputNome.value = "";
             document.getElementById('preco_venda').value = "";
+            inputNome.placeholder = "Ex: Farinha de Mandioca 1kg";
             if (readerDiv.style.display !== 'none') stopScanner();
         }
     </script>
