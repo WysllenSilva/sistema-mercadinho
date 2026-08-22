@@ -22,10 +22,10 @@
             color: var(--text); 
             display: flex; 
             flex-direction: column; 
-            height: 100%; /* Fallback */
-            height: 100dvh; /* Altura Dinâmica Real */
+            height: 100%; 
+            height: 100dvh; 
             overflow: hidden; 
-            overscroll-behavior-y: none; /* Evita aquele "puxão" da tela no celular */
+            overscroll-behavior-y: none; 
         }
         
         /* Cabeçalho */
@@ -46,23 +46,29 @@
         
         /* Carrinho */
         .carrinho { flex: 1; background: var(--white); border-radius: 12px; padding: 10px; overflow-y: auto; min-height: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+        .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; gap: 10px; }
         .item-carrinho:last-child { border-bottom: none; }
-        .item-nome { font-weight: 700; font-size: 1rem; margin-bottom: 5px; }
+        
+        /* Novo layout do item (Excluir + Nome) */
+        .item-info-group { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .btn-excluir { background: #fee2e2; color: var(--danger); border: none; border-radius: 8px; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; font-size: 1rem; cursor: pointer; flex-shrink: 0; font-weight: bold; transition: transform 0.1s;}
+        .btn-excluir:active { transform: scale(0.90); }
+        
+        .item-nome { font-weight: 700; font-size: 1rem; margin-bottom: 2px; line-height: 1.2;}
         .item-preco { font-size: 0.85rem; color: #64748b; }
         
-        .item-acoes { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .qty-control { display: flex; align-items: center; gap: 10px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+        .item-acoes { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+        .qty-control { display: flex; align-items: center; gap: 8px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
         .btn-qty { background: var(--white); border: 1px solid #cbd5e1; border-radius: 6px; width: 28px; height: 28px; font-size: 1.2rem; font-weight: bold; color: var(--primary); cursor: pointer; display: flex; justify-content: center; align-items: center;}
-        .qty-display { font-weight: 800; min-width: 20px; text-align: center; }
+        .qty-display { font-weight: 800; min-width: 20px; text-align: center; font-size: 0.95rem; }
         
-        /* Resumo e Pagamento - Protegido contra bordas de celular */
+        /* Resumo e Pagamento */
         .checkout-area { 
             flex-shrink: 0; 
             background: var(--white); 
             border-radius: 12px; 
             padding: 15px; 
-            padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* Margem de segurança iOS/Android */
+            padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
             box-shadow: 0 -4px 10px rgba(0,0,0,0.08); 
         }
         .total-display { font-size: 2rem; font-weight: 900; text-align: center; color: var(--success); margin-bottom: 10px; }
@@ -139,7 +145,7 @@
                     }
 
                     adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, qtdInput);
-                    document.getElementById('qtd_input').value = "1"; // Reseta o campo quantidade após bipar
+                    document.getElementById('qtd_input').value = "1"; 
                     
                 } else {
                     Swal.fire('Não Encontrado', 'Produto não cadastrado.', 'error');
@@ -160,11 +166,18 @@
             if (navigator.vibrate) navigator.vibrate(100); 
         }
 
+        // --- EXCLUSÃO TOTAL DO ITEM ---
+        function removerItemTotal(index) {
+            carrinho.splice(index, 1);
+            atualizarInterface();
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
         // --- BOTÕES DE + E - DIRETO NO CARRINHO ---
         function alterarQtd(index, delta) {
             carrinho[index].quantidade += delta;
             if (carrinho[index].quantidade <= 0) {
-                carrinho.splice(index, 1);
+                carrinho.splice(index, 1); // Se chegar a 0, remove
             }
             atualizarInterface();
         }
@@ -184,17 +197,21 @@
                 total += subtotal;
                 return `
                     <div class="item-carrinho">
-                        <div>
-                            <div class="item-nome">${item.nome}</div>
-                            <div class="item-preco">Un: R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
+                        <div class="item-info-group">
+                            <button class="btn-excluir" onclick="removerItemTotal(${index})">✖</button>
+                            <div>
+                                <div class="item-nome">${item.nome}</div>
+                                <div class="item-preco">Un: R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
+                            </div>
                         </div>
+                        
                         <div class="item-acoes">
                             <div class="qty-control">
                                 <button class="btn-qty" onclick="alterarQtd(${index}, -1)">-</button>
                                 <span class="qty-display">${item.quantidade}</span>
                                 <button class="btn-qty" onclick="alterarQtd(${index}, 1)">+</button>
                             </div>
-                            <span style="font-weight: 900; font-size: 1.1rem;">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                            <span style="font-weight: 900; font-size: 1.1rem; color: var(--text);">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
                         </div>
                     </div>
                 `;
@@ -203,7 +220,7 @@
             document.getElementById('display-total').innerText = "R$ " + total.toFixed(2).replace('.', ',');
         }
 
-        // --- MÁGICA DA VENDA COM ESTOQUE NEGATIVO (O SALVADOR DO BALCÃO) ---
+        // --- MÁGICA DA VENDA COM ESTOQUE NEGATIVO ---
         async function finalizarVenda(forma_pagamento) {
             if (carrinho.length === 0) return Swal.fire('Atenção', 'O carrinho está vazio!', 'warning');
 

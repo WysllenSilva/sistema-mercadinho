@@ -2,8 +2,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Entrada de Estoque - Mercadinho</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gestão de Estoque - Mercadinho</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -11,18 +11,24 @@
 
     <style>
         :root {
-            --primary: #2563eb; --success: #16a34a; --danger: #dc2626;
-            --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --warning: #f59e0b;
+            --bg: #f8fafc; --text: #0f172a; --white: #ffffff; --gray: #e2e8f0;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; }
         
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
         .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
-        .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; }
         
-        main { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+        main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
+        
+        /* Chaveador Entrada / Saída */
+        .toggle-container { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+        .btn-toggle { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-weight: 800; font-size: 1rem; color: #64748b; cursor: pointer; transition: 0.2s; }
+        .btn-toggle.active-entrada { background: var(--success); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-toggle.active-saida { background: var(--danger); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
@@ -32,11 +38,16 @@
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
+        /* Display de Saldo */
+        .saldo-box { display: none; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 15px; }
+        .saldo-box.negativo { border-color: var(--danger); background: #fef2f2; }
+        .saldo-valor { font-size: 1.5rem; font-weight: 900; color: var(--primary); }
+        .saldo-valor.negativo { color: var(--danger); }
+
         #reader { width: 100%; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); margin-bottom: 10px; }
-        .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .btn-save { width: 100%; background-color: var(--success); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; cursor: pointer; margin-top: 10px; }
+        .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-save { width: 100%; background-color: var(--primary); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; cursor: pointer; margin-top: 10px; }
         
-        .scanning { background-color: #ef4444 !important; }
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
@@ -44,14 +55,20 @@
 
     <header>
         <button class="btn-voltar-topo" onclick="window.location.href='menu.html'">⬅️</button>
-        <span class="titulo-topo">Entrada de Estoque</span>
+        <span class="titulo-topo">Gestão de Estoque</span>
         <div style="width: 45px;"></div>
     </header>
 
     <main>
         <div class="container">
+            
+            <div class="toggle-container">
+                <button class="btn-toggle active-entrada" id="btn-entrada" onclick="mudarModo('ENTRADA')">🟢 ENTRADA</button>
+                <button class="btn-toggle" id="btn-saida" onclick="mudarModo('SAIDA')">🔴 SAÍDA</button>
+            </div>
+
             <div id="reader"></div>
-            <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR PRODUTO</button>
+            <button type="button" class="btn-scan" onclick="toggleScanner()">📸 ESCANEAR PRODUTO</button>
 
             <div class="form-group">
                 <label>Código EAN</label>
@@ -63,34 +80,38 @@
                 <input type="text" id="nome_produto" placeholder="Aguardando bipagem..." readonly>
             </div>
 
+            <!-- Visor de Saldo Atual -->
+            <div class="saldo-box" id="box-saldo">
+                <div style="font-weight: 600; color: #64748b; font-size: 0.9rem;">Saldo Atual na Prateleira</div>
+                <div class="saldo-valor" id="txt-saldo">0 un</div>
+            </div>
+
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Quantidade (+)</label>
-                    <input type="number" id="quantidade" placeholder="Ex: 24" min="1">
+                    <label>Quantidade</label>
+                    <input type="number" id="quantidade" placeholder="Ex: 10" min="1">
                 </div>
-                <div class="form-group">
+                <!-- O Lote some quando for SAÍDA -->
+                <div class="form-group" id="grupo-lote">
                     <label>Lote (Opcional)</label>
                     <input type="text" id="lote" placeholder="Ex: L123">
                 </div>
             </div>
 
-            <div class="form-group">
+            <!-- A Data some quando for SAÍDA (FIFO automático) -->
+            <div class="form-group" id="grupo-vencimento">
                 <label>Data de Vencimento</label>
                 <input type="date" id="data_vencimento">
             </div>
 
-            <!-- MENU SUSPENSO (DROPDOWN) DE MOTIVOS -->
             <div class="form-group">
-                <label>Motivo da Entrada</label>
+                <label>Motivo da Movimentação</label>
                 <select id="motivo">
-                    <option value="Abastecimento (Compra)">Abastecimento (Compra)</option>
-                    <option value="Devolução de Cliente">Devolução de Cliente</option>
-                    <option value="Troca de Fornecedor">Troca de Fornecedor</option>
-                    <option value="Ajuste Manual de Saldo">Ajuste Manual de Saldo</option>
+                    <!-- Preenchido via JS -->
                 </select>
             </div>
 
-            <button class="btn-save" onclick="salvarEntrada()">📦 CONFIRMAR ENTRADA</button>
+            <button class="btn-save" id="btn-confirmar" onclick="salvarMovimentacao()">CONFIRMAR ENTRADA</button>
         </div>
     </main>
 
@@ -101,23 +122,83 @@
 
         let html5QrCode;
         let produtoSelecionadoId = null; 
+        let modoAtual = 'ENTRADA';
+        let saldoAtualPrateleira = 0;
 
-        // --- BUSCAR PRODUTO NO BANCO ---
+        const motivosEntrada = [
+            "Abastecimento (Compra)", "Devolução de Cliente", "Troca de Fornecedor", "Ajuste Manual Positivo"
+        ];
+        
+        const motivosSaida = [
+            "Perda por Vencimento", "Avaria / Quebra", "Consumo Interno (Loja)", "Ajuste Manual Negativo"
+        ];
+
+        // --- CONTROLE DA INTERFACE ---
+        function mudarModo(modo) {
+            modoAtual = modo;
+            const btnEntrada = document.getElementById('btn-entrada');
+            const btnSaida = document.getElementById('btn-saida');
+            const selectMotivo = document.getElementById('motivo');
+            const btnConfirmar = document.getElementById('btn-confirmar');
+
+            if (modo === 'ENTRADA') {
+                btnEntrada.classList.add('active-entrada');
+                btnSaida.classList.remove('active-saida');
+                
+                document.getElementById('grupo-lote').style.display = 'block';
+                document.getElementById('grupo-vencimento').style.display = 'block';
+                
+                selectMotivo.innerHTML = motivosEntrada.map(m => `<option value="${m}">${m}</option>`).join('');
+                btnConfirmar.innerText = "📦 CONFIRMAR ENTRADA";
+                btnConfirmar.style.backgroundColor = "var(--success)";
+            } else {
+                btnSaida.classList.add('active-saida');
+                btnEntrada.classList.remove('active-entrada');
+                
+                document.getElementById('grupo-lote').style.display = 'none';
+                document.getElementById('grupo-vencimento').style.display = 'none';
+                
+                selectMotivo.innerHTML = motivosSaida.map(m => `<option value="${m}">${m}</option>`).join('');
+                btnConfirmar.innerText = "📉 CONFIRMAR SAÍDA";
+                btnConfirmar.style.backgroundColor = "var(--danger)";
+            }
+        }
+
+        // --- BUSCA PRODUTO E SALDO ---
         async function buscarProduto(ean) {
             if (!ean) return;
-            document.getElementById('nome_produto').value = "Buscando...";
             produtoSelecionadoId = null;
+            document.getElementById('nome_produto').value = "Buscando...";
+            document.getElementById('box-saldo').style.display = 'none';
 
             try {
                 const { data, error } = await tabela_supabase
                     .from('produtos')
-                    .select('id, nome_produto')
+                    .select('id, nome_produto, prateleira_fisica ( quantidade )')
                     .eq('codigo_barras', ean)
                     .maybeSingle();
 
                 if (data) {
                     document.getElementById('nome_produto').value = data.nome_produto;
                     produtoSelecionadoId = data.id;
+                    
+                    // Calcula o saldo
+                    saldoAtualPrateleira = data.prateleira_fisica.reduce((acc, lote) => acc + lote.quantidade, 0);
+                    
+                    const boxSaldo = document.getElementById('box-saldo');
+                    const txtSaldo = document.getElementById('txt-saldo');
+                    
+                    boxSaldo.style.display = 'block';
+                    txtSaldo.innerText = `${saldoAtualPrateleira} un`;
+                    
+                    if (saldoAtualPrateleira < 0) {
+                        boxSaldo.classList.add('negativo');
+                        txtSaldo.classList.add('negativo');
+                    } else {
+                        boxSaldo.classList.remove('negativo');
+                        txtSaldo.classList.remove('negativo');
+                    }
+                    
                     document.getElementById('quantidade').focus(); 
                 } else {
                     document.getElementById('nome_produto').value = "";
@@ -129,91 +210,158 @@
             }
         }
 
-        // --- SCANNER ---
-        const readerDiv = document.getElementById('reader');
-        const btnScan = document.getElementById('btn-toggle-scan');
-
-        async function startScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            readerDiv.style.display = 'block';
-            btnScan.innerText = "🛑 PARAR CÂMERA";
-            btnScan.classList.add('scanning');
-
-            await html5QrCode.start(
-                { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
-                (decodedText) => {
-                    document.getElementById('codigo_barras').value = decodedText;
-                    if (navigator.vibrate) navigator.vibrate(100);
-                    stopScanner();
-                    buscarProduto(decodedText);
-                }, () => {}
-            ).catch(() => stopScanner());
-        }
-
-        async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
-            readerDiv.style.display = 'none';
-            btnScan.innerText = "📸 ESCANEAR PRODUTO";
-            btnScan.classList.remove('scanning');
-        }
-
-        btnScan.addEventListener('click', () => readerDiv.style.display === 'none' ? startScanner() : stopScanner());
-
-        // --- SALVAR A ENTRADA NAS DUAS TABELAS ---
-        async function salvarEntrada() {
-            if (!produtoSelecionadoId) {
-                return Swal.fire('Atenção', 'Bipe um produto válido primeiro!', 'warning');
-            }
+        // --- SALVAR MOVIMENTAÇÃO (A MÁGICA DA COMPENSAÇÃO) ---
+        async function salvarMovimentacao() {
+            if (!produtoSelecionadoId) return Swal.fire('Atenção', 'Bipe um produto válido primeiro!', 'warning');
 
             const qtd = parseInt(document.getElementById('quantidade').value);
-            const dataVenc = document.getElementById('data_vencimento').value;
-            const lote = document.getElementById('lote').value.trim() || 'SEM LOTE';
-            const motivoEntrada = document.getElementById('motivo').value; // Captura a escolha do select
+            const motivoText = document.getElementById('motivo').value;
 
-            if (!qtd || qtd <= 0 || !dataVenc) {
-                return Swal.fire('Atenção', 'Preencha a quantidade e a data de vencimento!', 'warning');
-            }
+            if (!qtd || qtd <= 0) return Swal.fire('Atenção', 'Informe uma quantidade válida!', 'warning');
+
+            Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // 1. Adiciona na Prateleira Física
-                const { error: erroPrateleira } = await tabela_supabase
-                    .from('prateleira_fisica')
-                    .insert([{ 
-                        produto_id: produtoSelecionadoId, 
-                        lote: lote, 
-                        quantidade: qtd, 
-                        data_vencimento: dataVenc 
+                if (modoAtual === 'ENTRADA') {
+                    const dataVenc = document.getElementById('data_vencimento').value;
+                    const lote = document.getElementById('lote').value.trim() || 'SEM LOTE';
+                    
+                    if (!dataVenc) return Swal.fire('Atenção', 'Data de vencimento obrigatória para entradas!', 'warning');
+
+                    let qtdParaLancar = qtd;
+
+                    // INTELIGÊNCIA: Tratar estoque negativo
+                    if (saldoAtualPrateleira < 0) {
+                        Swal.close(); // Fecha o loading para perguntar
+                        
+                        const resp = await Swal.fire({
+                            title: 'Estoque Negativo Detectado!',
+                            html: `O sistema registra <b>${saldoAtualPrateleira} un</b> deste produto.<br><br>Deseja abater essa dívida da nova entrada ou ignorar o erro antigo e lançar a quantidade total?`,
+                            icon: 'warning',
+                            showDenyButton: true,
+                            showCancelButton: true,
+                            confirmButtonText: 'Abater Dívida',
+                            denyButtonText: 'Zerar Dívida e Lançar Total',
+                            cancelButtonText: 'Cancelar',
+                            customClass: { confirmButton: 'btn-pix', denyButton: 'btn-cartao' }
+                        });
+
+                        if (resp.isConfirmed) {
+                            // Compensar
+                            qtdParaLancar = qtd - Math.abs(saldoAtualPrateleira);
+                            await tabela_supabase.from('prateleira_fisica').delete().eq('produto_id', produtoSelecionadoId).lt('quantidade', 0);
+                        } else if (resp.isDenied) {
+                            // Zerar erro passado
+                            qtdParaLancar = qtd;
+                            await tabela_supabase.from('prateleira_fisica').delete().eq('produto_id', produtoSelecionadoId).lt('quantidade', 0);
+                        } else {
+                            return; // Usuário cancelou
+                        }
+                        
+                        Swal.fire({ title: 'Salvando Ajuste...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    }
+
+                    // Insere na Prateleira (Se sobrou algo após compensar)
+                    if (qtdParaLancar > 0) {
+                        await tabela_supabase.from('prateleira_fisica').insert([{ 
+                            produto_id: produtoSelecionadoId, lote: lote, quantidade: qtdParaLancar, data_vencimento: dataVenc 
+                        }]);
+                    }
+
+                    // Registra Auditoria
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
+                        produto_id: produtoSelecionadoId, tipo: 'ENTRADA', quantidade: qtd, motivo: motivoText 
                     }]);
-                
-                if (erroPrateleira) throw erroPrateleira;
 
-                // 2. Registra na Auditoria de Movimentações
-                const { error: erroMovimentacao } = await tabela_supabase
-                    .from('movimentacoes_estoque')
-                    .insert([{ 
-                        produto_id: produtoSelecionadoId, 
-                        tipo: 'ENTRADA', 
-                        quantidade: qtd, 
-                        motivo: motivoEntrada 
+                } else {
+                    // MODO SAÍDA (Avaria, Vencimento...) - LÓGICA FIFO
+                    if (saldoAtualPrateleira < qtd) {
+                        Swal.close();
+                        const respSaida = await Swal.fire({
+                            title: 'Saldo Insuficiente',
+                            text: `Você tem ${saldoAtualPrateleira} un. mas quer dar saída em ${qtd}. Isso deixará o estoque negativo. Confirmar?`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Forçar Saída'
+                        });
+                        if (!respSaida.isConfirmed) return;
+                        Swal.fire({ title: 'Processando Saída...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    }
+
+                    let qtdRestante = qtd;
+                    const { data: lotes } = await tabela_supabase
+                        .from('prateleira_fisica')
+                        .select('id, quantidade')
+                        .eq('produto_id', produtoSelecionadoId)
+                        .order('data_vencimento', { ascending: true }); 
+
+                    if (lotes) {
+                        for (const l of lotes) {
+                            if (qtdRestante <= 0) break; 
+                            if (l.quantidade > 0) {
+                                if (l.quantidade <= qtdRestante) {
+                                    qtdRestante -= l.quantidade;
+                                    await tabela_supabase.from('prateleira_fisica').delete().eq('id', l.id);
+                                } else {
+                                    await tabela_supabase.from('prateleira_fisica').update({ quantidade: l.quantidade - qtdRestante }).eq('id', l.id);
+                                    qtdRestante = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    if (qtdRestante > 0) {
+                        await tabela_supabase.from('prateleira_fisica').insert([{ 
+                            produto_id: produtoSelecionadoId, lote: 'SAIDA_FORCADA', quantidade: -qtdRestante, data_vencimento: '2099-12-31' 
+                        }]);
+                    }
+
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
+                        produto_id: produtoSelecionadoId, tipo: 'SAIDA_AJUSTE', quantidade: qtd, motivo: motivoText 
                     }]);
+                }
 
-                if (erroMovimentacao) throw erroMovimentacao;
-
-                Swal.fire({ title: 'Sucesso!', text: 'Mercadoria adicionada à prateleira!', icon: 'success', timer: 2000, showConfirmButton: false });
-                
-                // Limpa o formulário
-                produtoSelecionadoId = null;
-                document.getElementById('codigo_barras').value = "";
-                document.getElementById('nome_produto').value = "";
-                document.getElementById('quantidade').value = "";
-                document.getElementById('lote').value = "";
-                document.getElementById('data_vencimento').value = "";
-                document.getElementById('motivo').selectedIndex = 0; // Volta para 'Abastecimento'
+                Swal.fire({ title: 'Sucesso!', text: 'Estoque atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
+                limparFormulario();
 
             } catch (err) {
-                Swal.fire('Erro', 'Falha ao registrar entrada: ' + err.message, 'error');
+                Swal.fire('Erro', 'Falha ao atualizar: ' + err.message, 'error');
             }
         }
+
+        function limparFormulario() {
+            produtoSelecionadoId = null;
+            document.getElementById('codigo_barras').value = "";
+            document.getElementById('nome_produto').value = "";
+            document.getElementById('quantidade').value = "";
+            document.getElementById('lote').value = "";
+            document.getElementById('data_vencimento').value = "";
+            document.getElementById('box-saldo').style.display = 'none';
+        }
+
+        // --- SCANNER ---
+        function toggleScanner() {
+            const div = document.getElementById('reader');
+            if (div.style.display === 'block') {
+                if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+                div.style.display = 'none';
+            } else {
+                div.style.display = 'block';
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (decodedText) => {
+                        html5QrCode.stop();
+                        div.style.display = 'none';
+                        document.getElementById('codigo_barras').value = decodedText;
+                        buscarProduto(decodedText);
+                    }, () => {}
+                );
+            }
+        }
+
+        // Inicializa a tela com o menu de Entrada carregado
+        mudarModo('ENTRADA');
     </script>
 </body>
 </html>
