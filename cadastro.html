@@ -185,43 +185,76 @@
     </main>
 
     <script>
+    
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5IisoImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         
-        // Correção de segurança da chave anon caso tenha quebrado na cópia
-        const supabaseKeyCorrigida = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
-        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, supabaseKeyCorrigida);
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let html5QrCode;
+        let produtoExistenteId = null; // Controla se vamos SALVAR (novo) ou ATUALIZAR (existente)
+
         const readerDiv = document.getElementById('reader');
         const btnScan = document.getElementById('btn-toggle-scan');
         const inputCodigo = document.getElementById('codigo_barras');
         const inputNome = document.getElementById('nome');
+        const inputPreco = document.getElementById('preco_venda');
+        const btnSave = document.querySelector('.btn-save');
 
-        // --- BUSCA AUTOMÁTICA NA API PÚBLICA DE EAN ---
+        // --- BUSCA INTELIGENTE (LOCAL + API BRASILEIRA) ---
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
             
-            // Feedback visual leve enquanto busca
-            inputNome.placeholder = "Buscando nome do produto na base global...";
+            inputNome.placeholder = "Buscando produto...";
+            produtoExistenteId = null; // Reseta o estado
+            btnSave.innerHTML = "💾 SALVAR PRODUTO";
+            btnSave.style.backgroundColor = "var(--success)";
 
             try {
-                const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ean}.json`);
+                // CAMADA 1: Busca no banco de dados local (Supabase)
+                const { data: prodLocal } = await tabela_supabase
+                    .from('produtos')
+                    .select('id, nome_produto, preco_venda')
+                    .eq('codigo_barras', ean)
+                    .maybeSingle();
+
+                if (prodLocal) {
+                    inputNome.value = prodLocal.nome_produto;
+                    if (prodLocal.preco_venda) {
+                        inputPreco.value = "R$ " + prodLocal.preco_venda.toFixed(2).replace('.', ',');
+                    }
+                    produtoExistenteId = prodLocal.id; // Salva o ID para atualizar depois
+                    
+                    btnSave.innerHTML = "🔄 ATUALIZAR PRODUTO";
+                    btnSave.style.backgroundColor = "var(--primary)"; // Fica azul para indicar edição
+                    
+                    Swal.fire({
+                        title: 'Já Cadastrado!',
+                        text: 'Este produto já existe no seu estoque. Você pode atualizar o preço ou o nome.',
+                        icon: 'info',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    return; 
+                }
+
+                // CAMADA 2: Busca na base pública brasileira (Open Food Facts BR)
+                const response = await fetch(`https://br.openfoodfacts.org/api/v0/product/${ean}.json`);
                 const data = await response.json();
 
                 if (data.status === 1 && data.product) {
                     const nomeEncontrado = data.product.product_name_pt || data.product.product_name || "";
                     if (nomeEncontrado) {
-                        inputNome.value = nomeEncontrado; // Preenche mantendo totalmente editável
+                        inputNome.value = nomeEncontrado; 
                     } else {
-                        inputNome.placeholder = "Não encontrado na base. Digite o nome.";
+                        inputNome.placeholder = "Não catalogado. Digite o nome.";
                     }
                 } else {
-                    inputNome.placeholder = "Produto não catalogado. Digite manualmente.";
+                    inputNome.placeholder = "Não catalogado. Digite o nome.";
                 }
             } catch (err) {
-                console.log("Erro ao buscar na API externa:", err);
-                inputNome.placeholder = "Erro na consulta online. Digite o nome.";
+                console.log("Erro na consulta:", err);
+                inputNome.placeholder = "Digite o nome manualmente.";
             }
         }
 
@@ -240,7 +273,7 @@
                         inputCodigo.value = decodedText;
                         if (navigator.vibrate) navigator.vibrate(100);
                         stopScanner();
-                        buscarProdutoAPI(decodedText); // Dispara a busca automática assim que lê!
+                        buscarProdutoAPI(decodedText); 
                     },
                     (errorMessage) => { }
                 );
@@ -263,6 +296,7 @@
             else stopScanner();
         });
 
+        // Formata automaticamente o campo de preço
         function formatarMoeda(elemento) {
             let valor = elemento.value.replace(/\D/g, "");
             valor = (valor / 100).toFixed(2) + "";
@@ -271,10 +305,11 @@
             elemento.value = valor === "0,00" ? "" : "R$ " + valor;
         }
 
+        // --- SALVAR OU ATUALIZAR ---
         async function salvarProduto() {
             const codigo = inputCodigo.value.trim();
             const nome = inputNome.value.trim();
-            let precoTexto = document.getElementById('preco_venda').value;
+            let precoTexto = inputPreco.value;
 
             if (!codigo || !nome || !precoTexto) {
                 Swal.fire('Atenção', 'Preencha todos os campos antes de salvar!', 'warning');
@@ -284,13 +319,26 @@
             let precoNumero = parseFloat(precoTexto.replace("R$ ", "").replace(".", "").replace(",", "."));
 
             try {
-                const { error } = await tabela_supabase
-                    .from('produtos')
-                    .insert([{ codigo_barras: codigo, nome_produto: nome, preco_venda: precoNumero }]);
+                if (produtoExistenteId) {
+                    // ATUALIZA produto existente
+                    const { error } = await tabela_supabase
+                        .from('produtos')
+                        .update({ nome_produto: nome, preco_venda: precoNumero })
+                        .eq('id', produtoExistenteId);
+                    
+                    if (error) throw error;
+                    Swal.fire({ title: 'Atualizado!', text: 'Produto atualizado com sucesso!', icon: 'success', timer: 1500, showConfirmButton: false });
+                
+                } else {
+                    // INSERE novo produto
+                    const { error } = await tabela_supabase
+                        .from('produtos')
+                        .insert([{ codigo_barras: codigo, nome_produto: nome, preco_venda: precoNumero }]);
+                    
+                    if (error) throw error;
+                    Swal.fire({ title: 'Sucesso!', text: 'Produto cadastrado!', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
 
-                if (error) throw error;
-
-                Swal.fire({ title: 'Sucesso!', text: 'Produto cadastrado!', icon: 'success', timer: 1500, showConfirmButton: false });
                 limparFormulario();
             } catch (err) {
                 Swal.fire('Erro', 'Falha ao salvar: ' + err.message, 'error');
@@ -300,8 +348,13 @@
         function limparFormulario() {
             inputCodigo.value = "";
             inputNome.value = "";
-            document.getElementById('preco_venda').value = "";
+            inputPreco.value = "";
             inputNome.placeholder = "Ex: Farinha de Mandioca 1kg";
+            produtoExistenteId = null;
+            
+            btnSave.innerHTML = "💾 SALVAR PRODUTO";
+            btnSave.style.backgroundColor = "var(--success)";
+            
             if (readerDiv.style.display !== 'none') stopScanner();
         }
     </script>
