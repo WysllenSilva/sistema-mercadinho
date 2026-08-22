@@ -138,20 +138,55 @@
         </div>
     </main>
 
-    <script>
+<script>
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let vendasCarregadas = [];
 
-        // Preenche os inputs de data automaticamente (Hoje e 7 dias atrás)
+        // 1. Declaramos a função Global no topo absoluto para o PC não ignorá-la
+        window.abrirDetalhes = function(index) {
+            const venda = vendasCarregadas[index];
+            if (!venda || !venda.itens_venda) return;
+            
+            const itens = venda.itens_venda;
+            let reciboHTML = `<div class="recibo-container">`;
+            
+            itens.forEach(item => {
+                const nome = item.produtos ? item.produtos.nome_produto : 'Produto Excluído';
+                const subtotal = item.quantidade * item.preco_unitario;
+                
+                reciboHTML += `
+                    <div class="recibo-item">
+                        <div>
+                            <div class="recibo-nome">${nome}</div>
+                            <div class="recibo-sub">${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div>
+                        </div>
+                        <div class="recibo-valor">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                `;
+            });
+            
+            reciboHTML += `</div>`;
+
+            const larguraPopup = window.innerWidth > 600 ? '400px' : '90%';
+
+            Swal.fire({
+                title: 'Detalhes da Venda',
+                html: reciboHTML,
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#475569',
+                width: larguraPopup
+            });
+        };
+
+        // 2. Preenche os inputs de data automaticamente (Hoje e 7 dias atrás)
         function inicializarFiltros() {
             const hoje = new Date();
             const seteDiasAtras = new Date();
             seteDiasAtras.setDate(hoje.getDate() - 7);
 
-            // Converte para o formato YYYY-MM-DD exigido pelo input HTML
             const formataData = (data) => {
                 const ano = data.getFullYear();
                 const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -163,6 +198,7 @@
             document.getElementById('data_fim').value = formataData(hoje);
         }
 
+        // 3. Busca no Banco
         async function carregarHistorico() {
             try {
                 document.getElementById('lista-vendas').innerHTML = `<div class="loading">Buscando vendas...</div>`;
@@ -175,7 +211,6 @@
                     return;
                 }
 
-                // Ajusta as datas para o fuso horário local e cobre das 00:00 até 23:59
                 const start = new Date(`${strInicio}T00:00:00`).toISOString();
                 const end = new Date(`${strFim}T23:59:59`).toISOString();
 
@@ -192,8 +227,8 @@
                             produtos ( nome_produto )
                         )
                     `)
-                    .gte('data_venda', start) // Maior ou igual a Data Inicial
-                    .lte('data_venda', end)   // Menor ou igual a Data Final
+                    .gte('data_venda', start)
+                    .lte('data_venda', end)
                     .order('data_venda', { ascending: false }); 
 
                 if (error) throw error;
@@ -207,6 +242,7 @@
             }
         }
 
+        // 4. Renderiza na tela
         function renderizarVendas() {
             const container = document.getElementById('lista-vendas');
             
@@ -229,50 +265,14 @@
                         </div>
                         <div class="venda-body">
                             <span class="venda-total">${valorFormatado}</span>
-                            <button class="btn-detalhes" onclick="abrirDetalhes(${index})">🛒 Ver Itens</button>
+                            <!-- Chamada direta para a função global -->
+                            <button class="btn-detalhes" onclick="window.abrirDetalhes(${index})">🛒 Ver Itens</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // Função tornada Global (window) para garantir que funcione no PC sem erros de escopo
-        window.abrirDetalhes = function(index) {
-            const venda = vendasCarregadas[index];
-            const itens = venda.itens_venda;
-            
-            let reciboHTML = `<div class="recibo-container">`;
-            
-            itens.forEach(item => {
-                const nome = item.produtos ? item.produtos.nome_produto : 'Produto Excluído';
-                const subtotal = item.quantidade * item.preco_unitario;
-                
-                reciboHTML += `
-                    <div class="recibo-item">
-                        <div>
-                            <div class="recibo-nome">${nome}</div>
-                            <div class="recibo-sub">${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div>
-                        </div>
-                        <div class="recibo-valor">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
-                    </div>
-                `;
-            });
-            
-            reciboHTML += `</div>`;
-
-            // Largura inteligente: Se for PC (tela > 600px), fixa em 400px. Se for celular, usa 90%.
-            const larguraPopup = window.innerWidth > 600 ? '400px' : '90%';
-
-            Swal.fire({
-                title: 'Detalhes da Venda',
-                html: reciboHTML,
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#475569',
-                width: larguraPopup
-            });
-        };
-
-        // Roda ao carregar a página
         inicializarFiltros();
         carregarHistorico();
     </script>
