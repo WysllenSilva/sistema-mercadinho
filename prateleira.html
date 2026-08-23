@@ -2,180 +2,263 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Estoque - Mercadinho</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Estoque e Validades - Mercadinho</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #2563eb; --danger: #ef4444; --warning: #f59e0b;
-            --success: #10b981; --bg: #f8fafc; --white: #ffffff;
-            --text-main: #1e293b; --text-muted: #64748b;
+            --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --warning: #f59e0b;
+            --bg: #f8fafc; --text: #0f172a; --white: #ffffff; --gray: #64748b;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); padding-bottom: 20px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
         
-        header { background: var(--primary); color: white; padding: 1rem; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .btn-back { text-decoration: none; color: white; font-size: 1.2rem; margin-right: 1rem; }
-        h1 { font-size: 1.1rem; font-weight: 600; }
-        
-        .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 56px; z-index: 99; }
-        .tab-btn { flex: 1; padding: 1rem; border: none; background: none; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
+        /* Cabeçalho */
+        header { background: var(--primary); padding: 15px; display: flex; align-items: center; gap: 15px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 10;}
+        .btn-voltar { background: rgba(255,255,255,0.2); border: none; border-radius: 8px; width: 40px; height: 40px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;}
+        .titulo-topo { font-size: 1.1rem; font-weight: 700; }
+
+        /* Abas (Tabs) */
+        .tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
+        .tab-btn { flex: 1; padding: 15px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); text-transform: uppercase; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s;}
         .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* Barra de Busca Fixa */
+        .search-container { padding: 10px 15px; background: var(--bg); flex-shrink: 0; }
+        .search-input { width: 100%; padding: 12px 15px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.05rem; outline: none; background: var(--white); font-weight: 600; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .search-input:focus { border-color: var(--primary); }
+
+        /* Área Principal de Rolagem */
+        main { flex: 1; overflow-y: auto; padding: 0 15px 15px 15px; }
+
+        /* Cards da Lista */
+        .card-item { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 10px;}
         
-        .content-section { display: none; padding: 1rem; }
-        .content-section.active { display: block; }
+        .info-esq { flex: 1; }
+        .info-nome { font-weight: 800; font-size: 1rem; color: var(--text); margin-bottom: 4px; line-height: 1.2;}
+        .info-sub { font-size: 0.85rem; color: var(--gray); }
         
-        .card { background: var(--white); border-radius: 8px; padding: 15px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .card-left { display: flex; flex-direction: column; gap: 4px; }
-        .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .info-dir { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0;}
+        .info-qtd { font-size: 1.3rem; font-weight: 900; color: var(--text); }
         
-        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-align: center; }
-        .status-vencido { background: #fee2e2; color: var(--danger); border: 1px solid var(--danger); }
-        .status-alerta { background: #fef3c7; color: var(--warning); border: 1px solid var(--warning); }
-        .status-ok { background: #dcfce7; color: var(--success); border: 1px solid var(--success); }
+        /* Badges de Status */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; border: 1px solid; }
         
-        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 1.1rem; }
+        .badge-ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .badge-baixo { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .badge-atencao { background: #fffbeb; color: #854d0e; border-color: #fef08a; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Oculta scrollbar para ficar mais limpo no celular */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body>
 
     <header>
-        <a href="menu.html" class="btn-back">⬅️</a>
-        <h1>Estoque e Validades</h1>
+        <a href="menu.html" class="btn-voltar">⬅️</a>
+        <div class="titulo-topo">Estoque e Validades</div>
     </header>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('estoque', this)">SALDO ATUAL</button>
-        <button class="tab-btn" onclick="switchTab('validades', this)">LOTES / VALIDADE</button>
+        <div class="tab-btn active" id="btn-tab-saldo" onclick="mudarAba('saldo')">Saldo Atual</div>
+        <div class="tab-btn" id="btn-tab-lotes" onclick="mudarAba('lotes')">Lotes / Validade</div>
     </div>
 
-    <section id="estoque" class="content-section active">
-        <div id="list-estoque"><div class="empty-state">Carregando saldo...</div></div>
-    </section>
+    <!-- NOVA BARRA DE BUSCA INSTANTÂNEA -->
+    <div class="search-container">
+        <input type="text" id="input-busca" class="search-input" placeholder="🔍 Buscar produto por nome..." onkeyup="filtrarListas(this.value)">
+    </div>
 
-    <section id="validades" class="content-section">
-        <div id="list-validades"><div class="empty-state">Carregando validades...</div></div>
-    </section>
+    <main>
+        <div id="tab-saldo" class="tab-content active">
+            <div style="text-align: center; margin-top: 20px; color: var(--gray);">Carregando estoque...</div>
+        </div>
+        <div id="tab-lotes" class="tab-content">
+            <div style="text-align: center; margin-top: 20px; color: var(--gray);">Carregando lotes...</div>
+        </div>
+    </main>
 
     <script>
         const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        function switchTab(tabId, btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
+        // Armazena os dados globalmente para o filtro funcionar sem recarregar
+        let dadosGlobaisSaldo = [];
+        let dadosGlobaisLotes = [];
 
-        // --- ABA 1: SALDO DE ESTOQUE ---
-        async function fetchEstoque() {
-            // Faz um JOIN poderoso: Traz os produtos e as quantidades deles que estão na prateleira
-            const { data, error } = await tabela_supabase
-                .from('produtos')
-                .select(`
-                    nome_produto, 
-                    estoque_minimo,
-                    prateleira_fisica ( quantidade )
-                `)
-                .order('nome_produto', { ascending: true });
+        function mudarAba(aba) {
+            document.getElementById('btn-tab-saldo').classList.remove('active');
+            document.getElementById('btn-tab-lotes').classList.remove('active');
+            document.getElementById('tab-saldo').classList.remove('active');
+            document.getElementById('tab-lotes').classList.remove('active');
 
-            if (error) return Swal.fire('Erro', error.message, 'error');
+            if (aba === 'saldo') {
+                document.getElementById('btn-tab-saldo').classList.add('active');
+                document.getElementById('tab-saldo').classList.add('active');
+            } else {
+                document.getElementById('btn-tab-lotes').classList.add('active');
+                document.getElementById('tab-lotes').classList.add('active');
+            }
             
-            if (!data || data.length === 0) {
-                document.getElementById('list-estoque').innerHTML = '<div class="empty-state">Nenhum produto cadastrado no sistema.</div>';
+            // Refiltra caso o usuário troque de aba com algo já digitado
+            filtrarListas(document.getElementById('input-busca').value);
+        }
+
+        async function carregarDadosPrateleira() {
+            try {
+                // Traz todos os produtos e o array de prateleira_fisica aninhado
+                const { data: produtos, error } = await tabela_supabase
+                    .from('produtos')
+                    .select('id, nome_produto, estoque_minimo, prateleira_fisica ( lote, quantidade, data_vencimento )')
+                    .order('nome_produto', { ascending: true });
+
+                if (error) throw error;
+
+                dadosGlobaisSaldo = [];
+                dadosGlobaisLotes = [];
+
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+
+                produtos.forEach(prod => {
+                    let totalProduto = 0;
+                    const min = prod.estoque_minimo || 5;
+
+                    if (prod.prateleira_fisica && prod.prateleira_fisica.length > 0) {
+                        prod.prateleira_fisica.forEach(lote => {
+                            totalProduto += lote.quantidade;
+                            
+                            // Calcula status de Vencimento
+                            let statusLote = { classe: 'badge-ok', texto: 'Em dia' };
+                            
+                            // Ignora produtos sem data ou com data 2099 (Estornos/Estoque Negativo)
+                            if (lote.data_vencimento && lote.data_vencimento !== '2099-12-31') {
+                                // Ajusta timezone da data do banco
+                                const partes = lote.data_vencimento.split('-');
+                                const dataVenc = new Date(partes[0], partes[1] - 1, partes[2]);
+                                
+                                const diferencaTempo = dataVenc.getTime() - hoje.getTime();
+                                const diasFaltando = Math.ceil(diferencaTempo / (1000 * 3600 * 24));
+
+                                if (diasFaltando < 0) {
+                                    statusLote = { classe: 'badge-baixo', texto: 'Vencido' };
+                                } else if (diasFaltando <= 30) {
+                                    statusLote = { classe: 'badge-atencao', texto: `Vence em ${diasFaltando} d` };
+                                }
+                            }
+
+                            // Adiciona na lista de Lotes se tiver quantidade maior que 0
+                            if (lote.quantidade > 0) {
+                                dadosGlobaisLotes.push({
+                                    nome: prod.nome_produto,
+                                    loteNome: lote.lote || 'SEM LOTE',
+                                    qtd: lote.quantidade,
+                                    vencimentoData: lote.data_vencimento,
+                                    vencimentoStr: lote.data_vencimento ? lote.data_vencimento.split('-').reverse().join('/') : 'N/A',
+                                    status: statusLote
+                                });
+                            }
+                        });
+                    }
+
+                    // Determina o status do Saldo (Estoque)
+                    let statusSaldo = { classe: 'badge-ok', texto: 'Estoque OK' };
+                    if (totalProduto <= min) {
+                        statusSaldo = { classe: 'badge-baixo', texto: 'Estoque Baixo' };
+                    }
+
+                    dadosGlobaisSaldo.push({
+                        nome: prod.nome_produto,
+                        minimo: min,
+                        total: totalProduto,
+                        status: statusSaldo
+                    });
+                });
+
+                // Ordena os lotes pelo vencimento mais próximo
+                dadosGlobaisLotes.sort((a, b) => new Date(a.vencimentoData) - new Date(b.vencimentoData));
+
+                // Renderiza a primeira vez sem filtro
+                renderizarSaldo(dadosGlobaisSaldo);
+                renderizarLotes(dadosGlobaisLotes);
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Erro', 'Não foi possível carregar os dados.', 'error');
+            }
+        }
+
+        function renderizarSaldo(dados) {
+            const container = document.getElementById('tab-saldo');
+            if (dados.length === 0) {
+                container.innerHTML = '<div style="text-align: center; margin-top: 20px; color: var(--gray);">Nenhum produto encontrado.</div>';
                 return;
             }
 
-            document.getElementById('list-estoque').innerHTML = data.map(item => {
-                // Calcula o saldo total somando todas as quantidades dos lotes deste produto
-                const saldoTotal = item.prateleira_fisica.reduce((acc, lote) => acc + lote.quantidade, 0);
-                const minimo = item.estoque_minimo || 5; // Se não tiver mínimo configurado, assume 5
-                
-                const statusClass = saldoTotal <= minimo ? 'status-vencido' : 'status-ok';
-                const statusTexto = saldoTotal <= minimo ? 'Estoque Baixo' : 'Estoque OK';
-
-                return `
-                    <div class="card">
-                        <div class="card-left">
-                            <h3 style="font-size: 1.1rem; font-weight: 700;">${item.nome_produto}</h3>
-                            <span style="font-size: 0.85rem; color: var(--text-muted);">Mínimo ideal: ${minimo} un</span>
-                        </div>
-                        <div class="card-right">
-                            <span style="font-size: 1.4rem; font-weight: 900;">${saldoTotal} un</span>
-                            <div class="badge ${statusClass}">${statusTexto}</div>
-                        </div>
+            container.innerHTML = dados.map(item => `
+                <div class="card-item">
+                    <div class="info-esq">
+                        <div class="info-nome">${item.nome}</div>
+                        <div class="info-sub">Mínimo ideal: ${item.minimo} un</div>
                     </div>
-                `;
-            }).join('');
+                    <div class="info-dir">
+                        <div class="info-qtd">${item.total} un</div>
+                        <div class="badge ${item.status.classe}">${item.status.texto}</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // --- ABA 2: LOTES E VALIDADES ---
-        async function fetchValidades() {
-            // Busca a prateleira e cruza com os produtos para pegar o nome
-            const { data, error } = await tabela_supabase
-                .from('prateleira_fisica')
-                .select(`
-                    lote, quantidade, data_vencimento, 
-                    produtos ( nome_produto )
-                `)
-                .order('data_vencimento', { ascending: true });
-
-            if (error) return Swal.fire('Erro', error.message, 'error');
-
-            if (!data || data.length === 0) {
-                document.getElementById('list-validades').innerHTML = '<div class="empty-state">A prateleira está vazia. Nenhuma mercadoria deu entrada ainda.</div>';
+        function renderizarLotes(dados) {
+            const container = document.getElementById('tab-lotes');
+            if (dados.length === 0) {
+                container.innerHTML = '<div style="text-align: center; margin-top: 20px; color: var(--gray);">Nenhum lote válido encontrado.</div>';
                 return;
             }
 
-            const hoje = new Date();
-            hoje.setHours(0,0,0,0);
-
-            document.getElementById('list-validades').innerHTML = data.map(item => {
-                const dataVenc = new Date(item.data_vencimento);
-                // Compensa o fuso horário para não dar erro no dia
-                dataVenc.setHours(dataVenc.getHours() + 3); 
-                
-                const diffTime = dataVenc - hoje;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                let status = 'status-ok';
-                let label = 'Em dia';
-
-                if (diffDays < 0) {
-                    status = 'status-vencido';
-                    label = 'Vencido!';
-                } else if (diffDays <= 30) {
-                    status = 'status-alerta';
-                    label = `Vence em ${diffDays} dias`;
-                }
-
-                // Formata a data para padrão BR (DD/MM/YYYY)
-                const dataFormatada = dataVenc.toLocaleDateString('pt-BR');
-
-                return `
-                    <div class="card">
-                        <div class="card-left">
-                            <h3 style="font-size: 1.05rem; font-weight: 700;">${item.produtos?.nome_produto || 'Produto s/ Nome'}</h3>
-                            <span style="font-size: 0.85rem; color: var(--text-muted);">Lote: ${item.lote || 'N/A'} | Qtd: ${item.quantidade}</span>
-                            <span style="font-size: 0.85rem; color: var(--text-muted);">Vencimento: <strong>${dataFormatada}</strong></span>
-                        </div>
-                        <div class="card-right">
-                            <div class="badge ${status}">${label}</div>
-                        </div>
+            container.innerHTML = dados.map(item => `
+                <div class="card-item">
+                    <div class="info-esq">
+                        <div class="info-nome">${item.nome}</div>
+                        <div class="info-sub">Lote: ${item.loteNome} | Qtd: ${item.qtd}</div>
+                        <div class="info-sub" style="margin-top: 2px;">Vencimento: <b>${item.vencimentoStr}</b></div>
                     </div>
-                `;
-            }).join('');
+                    <div class="info-dir">
+                        <div class="badge ${item.status.classe}">${item.status.texto}</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // Carrega as informações ao abrir a tela
-        fetchEstoque();
-        fetchValidades();
+        // --- SISTEMA DE BUSCA INSTANTÂNEA ---
+        function filtrarListas(termoDigitado) {
+            const termo = termoDigitado.toLowerCase().trim();
+
+            if (termo === "") {
+                // Se apagou a busca, mostra tudo de novo
+                renderizarSaldo(dadosGlobaisSaldo);
+                renderizarLotes(dadosGlobaisLotes);
+                return;
+            }
+
+            // Filtra os arrays originais buscando parte do nome
+            const saldoFiltrado = dadosGlobaisSaldo.filter(p => p.nome.toLowerCase().includes(termo));
+            const lotesFiltrados = dadosGlobaisLotes.filter(p => p.nome.toLowerCase().includes(termo));
+
+            // Atualiza a tela apenas com os resultados filtrados
+            renderizarSaldo(saldoFiltrado);
+            renderizarLotes(lotesFiltrados);
+        }
+
+        // Inicia o carregamento ao abrir a página
+        carregarDadosPrateleira();
     </script>
 </body>
 </html>
