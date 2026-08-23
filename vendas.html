@@ -28,7 +28,6 @@
         .cam-controls { display: flex; gap: 10px; margin-top: 10px; }
         .btn-cam-control { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;}
 
-        /* Ajuste fino na área de scan para não quebrar a tela */
         .scan-area { display: flex; gap: 8px; flex-shrink: 0; width: 100%; }
         .input-qtd { width: 60px; padding: 12px 5px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.2rem; text-align: center; font-weight: bold; outline: none; flex-shrink: 0;}
         .input-codigo { flex: 1; min-width: 0; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1rem; outline: none; }
@@ -52,7 +51,6 @@
         .btn-finalizar { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; cursor: pointer; letter-spacing: 1px; }
         .btn-finalizar:active { transform: scale(0.98); }
 
-        /* Checkout */
         .modal-checkout { text-align: left; }
         .mc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .mc-label { font-weight: 700; color: var(--text); font-size: 1.1rem;}
@@ -68,7 +66,6 @@
         .mc-status.ok { background: #dcfce7; color: var(--success); }
         .mc-status.troco { background: #fef9c3; color: #854d0e; }
 
-        /* Estilos da Busca por Nome */
         .search-result-item { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; background: var(--white);}
         .search-result-item:active { background: #f1f5f9; }
         .search-result-item:last-child { border-bottom: none; }
@@ -98,7 +95,6 @@
 
         <div class="scan-area">
             <input type="number" id="qtd_input" class="input-qtd" value="1" min="1">
-            <!-- Evento ondblclick adicionado para abrir a busca -->
             <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe, ou 2 toques p/ nome..." onchange="buscarProduto(this.value)" ondblclick="abrirBuscaNome()">
             <button class="btn-scan" onclick="ligarScanner()">📸</button>
         </div>
@@ -209,7 +205,7 @@
             }
         }
 
-        // --- BUSCA POR NOME (REFINADA) ---
+        // --- BUSCA POR NOME ---
         function abrirBuscaNome() {
             Swal.fire({
                 title: 'Buscar Produto',
@@ -497,7 +493,36 @@
             } catch (err) { Swal.fire('Erro', 'Houve um erro com o banco: ' + err.message, 'error'); }
         }
 
-        async function mostrarResumoCaixa() { /* ... Resumo Caixa Mantido ... */ }
+        // --- RESUMO DO CAIXA RESTAURADO ---
+        async function mostrarResumoCaixa() {
+            Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const hoje = new Date();
+                const start = new Date(hoje.setHours(0,0,0,0)).toISOString();
+                const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
+
+                const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end);
+                if (error) throw error;
+
+                let totais = { PIX: 0, DINHEIRO: 0, CARTAO: 0, TOTAL: 0 };
+                vendasDia.forEach(v => {
+                    totais.TOTAL += v.valor_total;
+                    totais.DINHEIRO += parseFloat(v.pgto_dinheiro) || 0;
+                    totais.PIX += parseFloat(v.pgto_pix) || 0;
+                    totais.CARTAO += parseFloat(v.pgto_cartao) || 0;
+                });
+
+                const relatorioHTML = `
+                    <div style="text-align: left; font-size: 1.1rem; padding: 10px;">
+                        <p style="border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">🟢 <b>PIX:</b> ${formatarValor(totais.PIX)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatarValor(totais.DINHEIRO)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatarValor(totais.CARTAO)}</p>
+                        <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Faturamento Líquido: <br> ${formatarValor(totais.TOTAL)}</h3>
+                    </div>
+                `;
+                Swal.fire({ title: 'Caixa de Hoje', html: relatorioHTML, confirmButtonText: 'Fechar', confirmButtonColor: '#475569' });
+            } catch(err) { Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error'); }
+        }
     </script>
 </body>
 </html>
