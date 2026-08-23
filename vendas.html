@@ -23,13 +23,17 @@
         
         main { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; min-height: 0; }
         
+        /* Modulo de Câmera */
+        #camera-box { display: none; margin-bottom: 5px; background: var(--white); padding: 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--primary); }
+        .cam-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-cam-control { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;}
+
         .scan-area { display: flex; gap: 8px; flex-shrink: 0; }
         .input-qtd { width: 60px; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.2rem; text-align: center; font-weight: bold; outline: none; }
         .input-codigo { flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
         .input-codigo:focus, .input-qtd:focus { border-color: var(--primary); }
         .btn-scan { background: #475569; color: white; border: none; border-radius: 10px; padding: 0 15px; font-size: 1.2rem; cursor: pointer; }
-        
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; display: none; border: 2px solid var(--primary); flex-shrink: 0; }
         
         .carrinho { flex: 1; background: var(--white); border-radius: 12px; padding: 10px; overflow-y: auto; min-height: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; gap: 10px; }
@@ -77,11 +81,19 @@
     </header>
 
     <main>
-        <div id="reader"></div>
+        <!-- NOVO MODULO DA CÂMERA -->
+        <div id="camera-box">
+            <div id="reader"></div>
+            <div class="cam-controls">
+                <button class="btn-cam-control" id="btn-flash" style="background: #f59e0b;" onclick="toggleFlash()">🔦 FLASH</button>
+                <button class="btn-cam-control" style="background: #dc2626;" onclick="desligarScanner()">🛑 FECHAR</button>
+            </div>
+        </div>
+
         <div class="scan-area">
             <input type="number" id="qtd_input" class="input-qtd" value="1" min="1">
             <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe/código..." onchange="buscarProduto(this.value)">
-            <button class="btn-scan" onclick="toggleScanner()">📸</button>
+            <button class="btn-scan" onclick="ligarScanner()">📸</button>
         </div>
 
         <div class="carrinho" id="lista-carrinho"><div style="text-align: center; color: #64748b; margin-top: 40px; font-size: 1.1rem;">Carrinho vazio</div></div>
@@ -98,11 +110,13 @@
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let carrinho = [];
-        let html5QrCode;
         let totalCarrinhoBruto = 0;
         let configPix = { chave: "", nome: "", cidade: "" };
 
-        // 1. Carrega as chaves do banco para o App
+        // Variáveis de Controle da Câmera
+        let html5QrCode = null;
+        let isFlashOn = false;
+
         async function carregarChavesPix() {
             const { data } = await tabela_supabase.from('configuracoes').select('chave, valor');
             if (data) {
@@ -115,7 +129,6 @@
         }
         carregarChavesPix();
 
-        // --- ENGENHARIA DE CRIPTOGRAFIA DO PIX EMV (Bacen) ---
         function crc16(str) {
             let crc = 0xFFFF;
             for (let i = 0; i < str.length; i++) {
@@ -133,13 +146,74 @@
             const len = (str) => String(str.length).padStart(2, '0');
             const merchantInfo = `0014br.gov.bcb.pix01${len(configPix.chave)}${configPix.chave}`;
             const valFormatado = valor.toFixed(2);
-            
             let payload = `00020126${len(merchantInfo)}${merchantInfo}52040000530398654${len(valFormatado)}${valFormatado}5802BR59${len(configPix.nome)}${configPix.nome}60${len(configPix.cidade)}${configPix.cidade}62070503***6304`;
-            
             return payload + crc16(payload);
         }
 
-        // --- CARRINHO BÁSICO ---
+        // --- SISTEMA DA CÂMERA (CORRIGIDO COM FOCO E FLASH) ---
+        async function ligarScanner() {
+            const camBox = document.getElementById('camera-box');
+            
+            // Se já tiver uma instância rodando, não tenta iniciar de novo
+            if (html5QrCode && html5QrCode.isScanning) {
+                return;
+            }
+
+            camBox.style.display = 'block';
+            document.getElementById('btn-flash').innerText = '🔦 FLASH';
+            isFlashOn = false;
+
+            html5QrCode = new Html5Qrcode("reader");
+
+            const videoConfig = { 
+                facingMode: "environment", 
+                focusMode: "continuous" // Força o Android/iOS a não travar o foco no fundo
+            };
+
+            try {
+                await html5QrCode.start(videoConfig, { fps: 10, qrbox: { width: 250, height: 150 } }, 
+                    (decodedText) => {
+                        // Quando ler com sucesso: vibra, desliga a câmera e busca o produto
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        desligarScanner();
+                        document.getElementById('codigo_barras').value = decodedText;
+                        buscarProduto(decodedText);
+                    }, 
+                    (errorMessage) => {
+                        // Erros normais de leitura frame-a-frame são ignorados
+                    }
+                );
+            } catch (err) {
+                console.error("Erro ao iniciar câmera", err);
+                desligarScanner();
+                Swal.fire('Erro', 'Não foi possível acessar a câmera traseira.', 'error');
+            }
+        }
+
+        async function desligarScanner() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                } catch(e) {}
+            }
+            document.getElementById('camera-box').style.display = 'none';
+        }
+
+        async function toggleFlash() {
+            if (html5QrCode && html5QrCode.getState() === 2) { // Estado 2 = Está escaneando
+                try {
+                    isFlashOn = !isFlashOn;
+                    await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isFlashOn }] });
+                    document.getElementById('btn-flash').innerText = isFlashOn ? '🔦 DESLIGAR' : '🔦 FLASH';
+                } catch (e) {
+                    isFlashOn = !isFlashOn; // Reverte se falhar
+                    Swal.fire({toast:true, position:'top-end', icon:'error', title:'Flash não suportado neste aparelho', showConfirmButton:false, timer:2000});
+                }
+            }
+        }
+
+        // --- CARRINHO ---
         async function buscarProduto(ean) {
             if (!ean) return;
             const qtdInput = parseInt(document.getElementById('qtd_input').value) || 1;
@@ -164,6 +238,7 @@
         }
 
         function removerItemTotal(index) { carrinho.splice(index, 1); atualizarInterface(); }
+        
         function alterarQtd(index, delta) {
             carrinho[index].quantidade += delta;
             if (carrinho[index].quantidade <= 0) carrinho.splice(index, 1);
@@ -228,7 +303,6 @@
             const statusBox = document.getElementById('chk_status');
             const btnConfirm = Swal.getConfirmButton();
 
-            // Lógica Exclusiva para Mostrar o QRCode Dinâmico do PIX
             const qrContainer = document.getElementById('box-qr-pix');
             if (valPix > 0 && configPix.chave !== "") {
                 const copiaEcola = gerarCopiaEColaPix(valPix);
@@ -275,7 +349,6 @@
                         <input type="text" id="chk_pix" class="mc-input pix" placeholder="0,00" inputmode="numeric" oninput="window.formatarMoedaCheckout(this); window.recalcularCheckout()">
                     </div>
                     
-                    <!-- BOX DO QRCODE DO PIX -->
                     <div id="box-qr-pix" style="display: none; text-align: center; margin: 15px 0; padding: 15px; background: #f0fdf4; border-radius: 12px; border: 2px dashed #16a34a;">
                         <div style="font-weight: 900; color: #166534; margin-bottom: 10px; font-size: 1.1rem;">Aponte a Câmera</div>
                         <img id="img-qr-pix" src="" style="width: 180px; height: 180px; border-radius: 10px; margin-bottom: 10px; border: 4px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -351,8 +424,35 @@
             } catch (err) { Swal.fire('Erro', err.message, 'error'); }
         }
 
-        async function mostrarResumoCaixa() { /* ... Resumo Caixa Mantido ... */ }
-        function toggleScanner() { /* ... Scanner Mantido ... */ }
+        async function mostrarResumoCaixa() {
+            Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const hoje = new Date();
+                const start = new Date(hoje.setHours(0,0,0,0)).toISOString();
+                const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
+
+                const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end);
+                if (error) throw error;
+
+                let totais = { PIX: 0, DINHEIRO: 0, CARTAO: 0, TOTAL: 0 };
+                vendasDia.forEach(v => {
+                    totais.TOTAL += v.valor_total;
+                    totais.DINHEIRO += v.pgto_dinheiro || 0;
+                    totais.PIX += v.pgto_pix || 0;
+                    totais.CARTAO += v.pgto_cartao || 0;
+                });
+
+                const relatorioHTML = `
+                    <div style="text-align: left; font-size: 1.1rem; padding: 10px;">
+                        <p style="border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">🟢 <b>PIX:</b> ${formatarValor(totais.PIX)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatarValor(totais.DINHEIRO)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatarValor(totais.CARTAO)}</p>
+                        <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Faturamento Líquido: <br> ${formatarValor(totais.TOTAL)}</h3>
+                    </div>
+                `;
+                Swal.fire({ title: 'Caixa de Hoje', html: relatorioHTML, confirmButtonText: 'Fechar', confirmButtonColor: '#475569' });
+            } catch(err) { Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error'); }
+        }
     </script>
 </body>
 </html>
