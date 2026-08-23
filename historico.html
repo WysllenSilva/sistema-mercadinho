@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Histórico de Vendas - Mercadinho</title>
+    <title>Histórico de Vendas - Mercadinho Elshaday</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -38,6 +38,7 @@
         .pgto-PIX { background: #dcfce7; color: #166534; }
         .pgto-DINHEIRO { background: #fef9c3; color: #854d0e; }
         .pgto-CARTÃO { background: #dbeafe; color: #1e40af; }
+        .pgto-MISTO { background: #f3e8ff; color: #6b21a8; }
         
         .venda-body { display: flex; justify-content: space-between; align-items: flex-end; }
         .venda-total { font-size: 1.4rem; font-weight: 900; }
@@ -99,7 +100,7 @@
 
                 const { data, error } = await tabela_supabase
                     .from('vendas')
-                    .select(`id, valor_total, forma_pagamento, data_venda, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
+                    .select(`id, valor_total, forma_pagamento, data_venda, desconto, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
                     .gte('data_venda', start).lte('data_venda', end)
                     .order('data_venda', { ascending: false });
 
@@ -130,7 +131,7 @@
                             <span class="venda-total">R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span>
                             <div class="acoes-venda">
                                 <button class="btn-detalhes" onclick="abrirDetalhes(${i})">🛒 Itens</button>
-                                <button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️ Cancelar</button>
+                                <button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️</button>
                             </div>
                         </div>
                     </div>
@@ -140,18 +141,38 @@
 
         window.abrirDetalhes = function(i) {
             const v = vendasCarregadas[i];
+            let subtotalItens = 0;
+            
             let html = `<div class="recibo-container">`;
+            
             v.itens_venda.forEach(item => {
                 const nome = item.produtos ? item.produtos.nome_produto : 'Item';
-                html += `<div class="recibo-item"><div><b>${nome}</b><br>${item.quantidade}x R$ ${item.preco_unitario.toFixed(2)}</div><div class="recibo-valor">R$ ${(item.quantidade*item.preco_unitario).toFixed(2)}</div></div>`;
+                const subItem = item.quantidade * item.preco_unitario;
+                subtotalItens += subItem;
+                html += `<div class="recibo-item"><div><b>${nome}</b><br>${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div><div class="recibo-valor">R$ ${subItem.toFixed(2).replace('.', ',')}</div></div>`;
             });
+            
+            html += `<div style="border-top: 2px solid #cbd5e1; margin-top: 15px; padding-top: 10px;">`;
+            html += `<div style="display:flex; justify-content:space-between; color:#64748b;"><span>Subtotal:</span><span>R$ ${subtotalItens.toFixed(2).replace('.', ',')}</span></div>`;
+            
+            if (v.desconto > 0) {
+                html += `<div style="display:flex; justify-content:space-between; color:#dc2626; font-weight:bold;"><span>Desconto:</span><span>- R$ ${v.desconto.toFixed(2).replace('.', ',')}</span></div>`;
+            }
+            
+            html += `<div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:900; margin-top:5px;"><span>TOTAL:</span><span>R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span></div>`;
             html += `</div>`;
-            Swal.fire({ title: 'Itens da Venda', html, width: '90%' });
+
+            html += `<div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-top:15px; font-size:0.95rem;">`;
+            html += `<div style="font-weight:bold; margin-bottom:5px;">Pagamento (${v.forma_pagamento}):</div>`;
+            if (v.pgto_dinheiro > 0) html += `<div>🟡 Dinheiro: R$ ${v.pgto_dinheiro.toFixed(2).replace('.', ',')}</div>`;
+            if (v.pgto_pix > 0) html += `<div>🟢 PIX: R$ ${v.pgto_pix.toFixed(2).replace('.', ',')}</div>`;
+            if (v.pgto_cartao > 0) html += `<div>🔵 Cartão: R$ ${v.pgto_cartao.toFixed(2).replace('.', ',')}</div>`;
+            html += `</div></div>`;
+
+            Swal.fire({ title: 'Cupom da Venda', html, width: '90%' });
         };
 
-        // --- EXCLUSÃO / ESTORNO RESTRITO A ADMINISTRADOR ---
         async function cancelarVenda(vendaId) {
-            // Pede o PIN do Administrador
             const { value: pinDigitado } = await Swal.fire({
                 title: 'Restrito a Administrador',
                 text: 'Digite o PIN de acesso do Administrador para cancelar esta venda:',
@@ -167,7 +188,6 @@
             Swal.fire({ title: 'Verificando permissão...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // Valida no banco se existe um Admin com esse PIN
                 const { data: adminUser, error: errAdmin } = await tabela_supabase
                     .from('usuarios')
                     .select('nome')
@@ -181,30 +201,20 @@
 
                 Swal.fire({ title: 'Estornando venda e estoque...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                // Pega os itens da venda para devolver à prateleira física
                 const vendaAlvo = vendasCarregadas.find(v => v.id === vendaId);
                 
                 if (vendaAlvo && vendaAlvo.itens_venda) {
                     for (const item of vendaAlvo.itens_venda) {
-                        // Devolve a quantidade para a prateleira (cria um lote de estorno)
                         await tabela_supabase.from('prateleira_fisica').insert([{
-                            produto_id: item.produto_id,
-                            lote: 'ESTORNO_VENDA',
-                            quantidade: item.quantidade,
-                            data_vencimento: '2099-12-31'
+                            produto_id: item.produto_id, lote: 'ESTORNO_VENDA', quantidade: item.quantidade, data_vencimento: '2099-12-31'
                         }]);
 
-                        // Registra a movimentação de auditoria
                         await tabela_supabase.from('movimentacoes_estoque').insert([{
-                            produto_id: item.produto_id,
-                            tipo: 'ENTRADA',
-                            quantidade: item.quantidade,
-                            motivo: `Cancelamento de Venda por ${adminUser.nome}`
+                            produto_id: item.produto_id, tipo: 'ENTRADA', quantidade: item.quantidade, motivo: `Cancelamento de Venda por ${adminUser.nome}`
                         }]);
                     }
                 }
 
-                // Apaga a venda do banco (itens_venda apagam sozinhos por causa do CASCADE)
                 const { error: errDel } = await tabela_supabase.from('vendas').delete().eq('id', vendaId);
                 if (errDel) throw errDel;
 
@@ -218,7 +228,6 @@
 
         inicializarFiltros();
         carregarHistorico();
-        
     </script>
 </body>
 </html>

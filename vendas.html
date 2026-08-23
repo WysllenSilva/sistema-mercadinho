@@ -52,7 +52,7 @@
         .modal-checkout { text-align: left; }
         .mc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .mc-label { font-weight: 700; color: var(--text); font-size: 1.1rem;}
-        .mc-input { width: 100px; padding: 8px; text-align: right; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; font-weight: bold; outline: none;}
+        .mc-input { width: 110px; padding: 8px; text-align: right; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; font-weight: bold; outline: none;}
         .mc-input:focus { border-color: var(--primary); }
         .mc-input.dinheiro { border-color: var(--warning); background: #fef3c7;}
         .mc-input.pix { border-color: var(--success); background: #dcfce7;}
@@ -102,15 +102,7 @@
 
         let carrinho = [];
         let html5QrCode;
-        let limiteDesconto = 10; // Padrão de segurança
         let totalCarrinhoBruto = 0;
-
-        // Carrega o limite de desconto do banco ao iniciar
-        async function carregarConfiguracoes() {
-            const { data } = await tabela_supabase.from('configuracoes').select('valor').eq('chave', 'max_desconto').maybeSingle();
-            if (data) limiteDesconto = parseFloat(data.valor);
-        }
-        carregarConfiguracoes();
 
         async function buscarProduto(ean) {
             if (!ean) return;
@@ -188,27 +180,35 @@
             document.getElementById('display-total').innerText = formatarValor(totalCarrinhoBruto);
         }
 
-        // --- SISTEMA DE CHECKOUT: TROCO E PAGAMENTO MISTO ---
+        // --- SISTEMA DE CHECKOUT ---
+        window.formatarMoedaCheckout = function(el) {
+            let valor = el.value.replace(/\D/g, "");
+            valor = (valor / 100).toFixed(2) + "";
+            valor = valor.replace(".", ",");
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            el.value = valor === "0,00" ? "" : valor;
+        };
+
+        window.parseMoeda = function(texto) {
+            if (!texto) return 0;
+            return parseFloat(texto.replace(/\./g, "").replace(",", ".")) || 0;
+        };
+
         window.recalcularCheckout = function() {
-            // 1. Calcula Desconto
-            let valDesconto = parseFloat(document.getElementById('chk_desconto').value) || 0;
-            const maxReais = totalCarrinhoBruto * (limiteDesconto / 100);
+            let valDesconto = window.parseMoeda(document.getElementById('chk_desconto').value);
             
-            if (valDesconto > maxReais) {
-                valDesconto = maxReais;
-                document.getElementById('chk_desconto').value = valDesconto.toFixed(2);
-                Swal.showValidationMessage(`Desconto máx. permitido é ${limiteDesconto}% (${formatarValor(maxReais)})`);
-            } else {
-                Swal.resetValidationMessage();
+            // Trava para o desconto não ser maior que a própria compra
+            if (valDesconto > totalCarrinhoBruto) {
+                valDesconto = totalCarrinhoBruto;
+                document.getElementById('chk_desconto').value = formatarValor(valDesconto).replace('R$ ', '');
             }
 
             const totalComDesconto = totalCarrinhoBruto - valDesconto;
             document.getElementById('chk_total_final').innerText = formatarValor(totalComDesconto);
 
-            // 2. Calcula Pagamentos Recebidos
-            const valDinheiro = parseFloat(document.getElementById('chk_dinheiro').value) || 0;
-            const valPix = parseFloat(document.getElementById('chk_pix').value) || 0;
-            const valCartao = parseFloat(document.getElementById('chk_cartao').value) || 0;
+            const valDinheiro = window.parseMoeda(document.getElementById('chk_dinheiro').value);
+            const valPix = window.parseMoeda(document.getElementById('chk_pix').value);
+            const valCartao = window.parseMoeda(document.getElementById('chk_cartao').value);
             
             const totalRecebido = valDinheiro + valPix + valCartao;
             const diferenca = totalRecebido - totalComDesconto;
@@ -217,28 +217,17 @@
             const btnConfirm = Swal.getConfirmButton();
 
             if (totalRecebido === 0) {
-                statusBox.className = 'mc-status';
-                statusBox.innerText = 'Aguardando Pagamento';
-                btnConfirm.disabled = true;
+                statusBox.className = 'mc-status'; statusBox.innerText = 'Aguardando Pagamento'; btnConfirm.disabled = true;
             } else if (diferenca < -0.01) {
-                statusBox.className = 'mc-status falta';
-                statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`;
-                btnConfirm.disabled = true;
+                statusBox.className = 'mc-status falta'; statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`; btnConfirm.disabled = true;
             } else if (diferenca > 0.01) {
-                // Só tem troco se teve pagamento em dinheiro
                 if (valDinheiro > 0) {
-                    statusBox.className = 'mc-status troco';
-                    statusBox.innerText = `Troco: ${formatarValor(diferenca)}`;
-                    btnConfirm.disabled = false;
+                    statusBox.className = 'mc-status troco'; statusBox.innerText = `Troco: ${formatarValor(diferenca)}`; btnConfirm.disabled = false;
                 } else {
-                    statusBox.className = 'mc-status falta';
-                    statusBox.innerText = `Valor acima (Sem dinheiro para troco)`;
-                    btnConfirm.disabled = true;
+                    statusBox.className = 'mc-status falta'; statusBox.innerText = `Valor acima (Sem dinheiro para troco)`; btnConfirm.disabled = true;
                 }
             } else {
-                statusBox.className = 'mc-status ok';
-                statusBox.innerText = 'Valor Exato ✔️';
-                btnConfirm.disabled = false;
+                statusBox.className = 'mc-status ok'; statusBox.innerText = 'Valor Exato ✔️'; btnConfirm.disabled = false;
             }
         };
 
@@ -247,85 +236,68 @@
 
             const htmlCheckout = `
                 <div class="modal-checkout">
-                    <div class="mc-row">
-                        <span class="mc-label">Subtotal:</span>
-                        <span style="font-size: 1.2rem; font-weight: bold;">${formatarValor(totalCarrinhoBruto)}</span>
-                    </div>
-                    <div class="mc-row">
-                        <span class="mc-label">Desconto (R$):</span>
-                        <input type="number" id="chk_desconto" class="mc-input" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
-                    </div>
-                    
-                    <div class="mc-divider"></div>
-                    <div class="mc-row">
-                        <span class="mc-label" style="font-size: 1.4rem;">Total a Pagar:</span>
-                        <span class="mc-total-final" id="chk_total_final">${formatarValor(totalCarrinhoBruto)}</span>
+                    <div class="mc-row"><span class="mc-label">Subtotal:</span><span style="font-size: 1.2rem; font-weight: bold;">${formatarValor(totalCarrinhoBruto)}</span></div>
+                    <div class="mc-row"><span class="mc-label">Desconto (R$):</span>
+                        <input type="text" id="chk_desconto" class="mc-input" placeholder="0,00" inputmode="numeric" oninput="window.formatarMoedaCheckout(this); window.recalcularCheckout()">
                     </div>
                     <div class="mc-divider"></div>
-
+                    <div class="mc-row"><span class="mc-label" style="font-size: 1.4rem;">Total a Pagar:</span><span class="mc-total-final" id="chk_total_final">${formatarValor(totalCarrinhoBruto)}</span></div>
+                    <div class="mc-divider"></div>
                     <div style="font-weight: 800; margin-bottom: 10px; color: #64748b;">VALORES RECEBIDOS:</div>
-                    <div class="mc-row">
-                        <span class="mc-label">🟡 Dinheiro:</span>
-                        <input type="number" id="chk_dinheiro" class="mc-input dinheiro" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    <div class="mc-row"><span class="mc-label">🟡 Dinheiro:</span>
+                        <input type="text" id="chk_dinheiro" class="mc-input dinheiro" placeholder="0,00" inputmode="numeric" oninput="window.formatarMoedaCheckout(this); window.recalcularCheckout()">
                     </div>
-                    <div class="mc-row">
-                        <span class="mc-label">🟢 PIX:</span>
-                        <input type="number" id="chk_pix" class="mc-input pix" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    <div class="mc-row"><span class="mc-label">🟢 PIX:</span>
+                        <input type="text" id="chk_pix" class="mc-input pix" placeholder="0,00" inputmode="numeric" oninput="window.formatarMoedaCheckout(this); window.recalcularCheckout()">
                     </div>
-                    <div class="mc-row">
-                        <span class="mc-label">🔵 Cartão:</span>
-                        <input type="number" id="chk_cartao" class="mc-input cartao" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    <div class="mc-row"><span class="mc-label">🔵 Cartão:</span>
+                        <input type="text" id="chk_cartao" class="mc-input cartao" placeholder="0,00" inputmode="numeric" oninput="window.formatarMoedaCheckout(this); window.recalcularCheckout()">
                     </div>
-
                     <div id="chk_status" class="mc-status">Aguardando Pagamento</div>
                 </div>
             `;
 
             Swal.fire({
-                title: 'Pagamento',
-                html: htmlCheckout,
-                showCancelButton: true,
-                confirmButtonText: '✔️ CONFIRMAR VENDA',
-                cancelButtonText: 'Voltar',
-                confirmButtonColor: '#16a34a',
-                didOpen: () => {
-                    Swal.getConfirmButton().disabled = true; // Começa desabilitado até bater o valor
-                }
-            }).then((result) => {
-                if (result.isConfirmed) processarVendaBanco();
-            });
+                title: 'Pagamento', html: htmlCheckout, showCancelButton: true, confirmButtonText: '✔️ CONFIRMAR VENDA', cancelButtonText: 'Voltar', confirmButtonColor: '#16a34a',
+                didOpen: () => { Swal.getConfirmButton().disabled = true; }
+            }).then((result) => { if (result.isConfirmed) processarVendaBanco(); });
         }
 
         async function processarVendaBanco() {
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            const vDesc = parseFloat(document.getElementById('chk_desconto').value) || 0;
-            const vDin = parseFloat(document.getElementById('chk_dinheiro').value) || 0;
-            const vPix = parseFloat(document.getElementById('chk_pix').value) || 0;
-            const vCar = parseFloat(document.getElementById('chk_cartao').value) || 0;
+            const vDesc = window.parseMoeda(document.getElementById('chk_desconto').value);
+            const vDin = window.parseMoeda(document.getElementById('chk_dinheiro').value);
+            const vPix = window.parseMoeda(document.getElementById('chk_pix').value);
+            const vCar = window.parseMoeda(document.getElementById('chk_cartao').value);
             
             const totalComDesconto = totalCarrinhoBruto - vDesc;
             
-            // Define o rótulo principal para o Histórico (Misto se tiver mais de um)
             let formas = [];
             if (vDin > 0) formas.push('DINHEIRO');
             if (vPix > 0) formas.push('PIX');
             if (vCar > 0) formas.push('CARTÃO');
             const formaPrincipal = formas.length > 1 ? 'MISTO' : formas[0];
 
+            // Para o banco, registramos o valor líquido de dinheiro (descontando o troco)
+            let dinheiroRealRecebido = vDin;
+            const totalPagoGeral = vDin + vPix + vCar;
+            if (totalPagoGeral > totalComDesconto && vDin > 0) {
+                const trocoDevolvido = totalPagoGeral - totalComDesconto;
+                dinheiroRealRecebido = vDin - trocoDevolvido;
+            }
+
             try {
-                // 1. Cria a Venda
                 const { data: novaVenda, error: errVenda } = await tabela_supabase.from('vendas').insert([{ 
                     valor_total: totalComDesconto, 
                     forma_pagamento: formaPrincipal,
                     desconto: vDesc,
-                    pgto_dinheiro: vDin,
+                    pgto_dinheiro: dinheiroRealRecebido,
                     pgto_pix: vPix,
                     pgto_cartao: vCar
                 }]).select().single();
                 if (errVenda) throw errVenda;
 
-                // 2. Registra itens e abate estoque
                 for (const item of carrinho) {
                     await tabela_supabase.from('itens_venda').insert([{ venda_id: novaVenda.id, produto_id: item.id, quantidade: item.quantidade, preco_unitario: item.preco }]);
                     await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: 'Venda PDV' }]);
@@ -363,7 +335,6 @@
             }
         }
 
-        // --- DASHBOARD: FECHAMENTO DE CAIXA ---
         async function mostrarResumoCaixa() {
             Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             
