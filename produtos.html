@@ -72,7 +72,6 @@
 
     <main>
         <div class="container">
-            <!-- CABEÇALHO DO PRODUTO (Sempre Visível) -->
             <div class="form-group" style="margin-bottom: 0;">
                 <label for="codigo_barras">Código de Barras (EAN)</label>
                 <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
@@ -81,16 +80,13 @@
                 <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR CÓDIGO</button>
             </div>
 
-            <!-- ÁREA DE DADOS (Só aparece após bipar) -->
             <div id="form-detalhes">
-                
-                <!-- NAVEGAÇÃO DAS ABAS -->
                 <div class="tabs">
                     <div class="tab-btn active" id="btn-tab-pre" onclick="mudarAba('pre')">⚡ PRÉ-CADASTRO</div>
                     <div class="tab-btn" id="btn-tab-comp" onclick="mudarAba('comp')">📝 COMPLETO</div>
                 </div>
 
-                <!-- ================= ABA 1: PRÉ-CADASTRO RÁPIDO ================= -->
+                <!-- ABA 1: PRÉ-CADASTRO RÁPIDO -->
                 <div id="tab-pre" class="tab-content active">
                     <div class="form-group">
                         <label>Nome do Produto</label>
@@ -103,7 +99,7 @@
                     <button class="btn-acao btn-save-fast" onclick="salvarPreCadastro()">⚡ SALVAR RÁPIDO</button>
                 </div>
 
-                <!-- ================= ABA 2: CADASTRO COMPLETO ================= -->
+                <!-- ABA 2: CADASTRO COMPLETO -->
                 <div id="tab-comp" class="tab-content">
                     <div class="form-group">
                         <label>Nome do Produto</label>
@@ -136,7 +132,7 @@
                     </div>
 
                     <div class="bloco-estoque-inicial" id="bloco-estoque-novo">
-                        <h4>📦 Estoque Inicial (Opcional)</h4>
+                        <h4>📦 Adicionar Estoque (Opcional)</h4>
                         <div class="grid-2">
                             <div class="form-group" style="margin-bottom: 8px;">
                                 <label>Quantidade</label>
@@ -153,11 +149,9 @@
                         </div>
                     </div>
 
-                    <!-- Botões Dinâmicos da Aba Completa -->
                     <button class="btn-acao btn-save-full" id="btn-salvar-comp" onclick="salvarCadastroCompleto()">💾 SALVAR E ESTOCAR</button>
                     <button class="btn-acao btn-update" id="btn-atualizar-comp" style="display: none;" onclick="salvarCadastroCompleto()">🔄 ATUALIZAR PRODUTO</button>
                 </div>
-
             </div>
         </div>
     </main>
@@ -173,7 +167,6 @@
         const boxForm = document.getElementById('form-detalhes');
         const selectCategoria = document.getElementById('categoria_comp');
 
-        // --- CONTROLE DE ABAS ---
         function mudarAba(aba) {
             document.getElementById('btn-tab-pre').classList.remove('active');
             document.getElementById('btn-tab-comp').classList.remove('active');
@@ -236,7 +229,6 @@
             if (custo > 0 && venda > custo) document.getElementById('porcentagem_lucro_comp').value = Math.round(((venda - custo) / custo) * 100);
         }
 
-        // --- FLUXO DE BUSCA E DEFINIÇÃO DA INTERFACE ---
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
 
@@ -264,24 +256,27 @@
                         window.location.href = `movimentacoes.html?ean=${ean}`;
                         return;
                     } else if (resp.isDenied) {
-                        // FORÇA A ABA COMPLETO PARA ATUALIZAÇÃO
                         boxForm.style.display = 'block';
                         mudarAba('comp');
                         
                         produtoExistenteId = prodLocal.id;
                         
-                        // Preenche formulário completo
                         document.getElementById('nome_comp').value = prodLocal.nome_produto || "";
                         await carregarCategorias(prodLocal.categoria || "");
                         document.getElementById('preco_custo_comp').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
                         document.getElementById('porcentagem_lucro_comp').value = prodLocal.porcentagem_lucro || "";
                         document.getElementById('preco_venda_comp').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
                         
-                        // Preenche aba pré-cadastro por segurança
                         document.getElementById('nome_pre').value = prodLocal.nome_produto || "";
                         document.getElementById('preco_venda_pre').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
                         
-                        document.getElementById('bloco-estoque-novo').style.display = 'none'; 
+                        // Zera os campos de estoque para o usuário não lançar estoque duplicado sem querer
+                        document.getElementById('ini_qtd').value = "";
+                        document.getElementById('ini_lote').value = "";
+                        document.getElementById('ini_vencimento').value = "";
+
+                        // AGORA O BLOCO DE ESTOQUE FICA VISÍVEL NA ATUALIZAÇÃO
+                        document.getElementById('bloco-estoque-novo').style.display = 'block'; 
                         document.getElementById('btn-salvar-comp').style.display = 'none';
                         document.getElementById('btn-atualizar-comp').style.display = 'flex';
                     } else if (resp.isDismissed) {
@@ -290,7 +285,6 @@
                     }
 
                 } else {
-                    // PRODUTO NOVO: Força a aba PRÉ-CADASTRO
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
                     mudarAba('pre');
@@ -305,7 +299,6 @@
                     const data = await response.json();
                     const nomeSugerido = (data.status === 1 && data.product) ? (data.product.product_name_pt || data.product.product_name || "") : "";
                     
-                    // Preenche ambos os formulários para o usuário ter liberdade
                     document.getElementById('nome_pre').value = nomeSugerido;
                     document.getElementById('nome_comp').value = nomeSugerido;
                     
@@ -320,13 +313,10 @@
             } catch (err) { console.log(err); }
         }
 
-        // --- SALVAMENTOS ---
-
-        // 1. Ação da Aba Pré-Cadastro
         async function salvarPreCadastro() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_pre').value.trim();
-            const venda = parseValor(document.getElementById('preco_venda_pre').value); // Permite 0
+            const venda = parseValor(document.getElementById('preco_venda_pre').value); 
 
             if (!codigo || !nome) {
                 return Swal.fire('Atenção', 'Código e Nome são obrigatórios!', 'warning');
@@ -335,7 +325,7 @@
             Swal.fire({ title: 'Salvando Rápido...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             const payload = { codigo_barras: codigo, nome_produto: nome };
-            if (venda > 0) payload.preco_venda = venda; // Só envia se informou
+            if (venda > 0) payload.preco_venda = venda; 
 
             try {
                 if (produtoExistenteId) {
@@ -350,7 +340,6 @@
             } catch (err) { Swal.fire('Erro', err.message, 'error'); }
         }
 
-        // 2. Ação da Aba Cadastro Completo
         async function salvarCadastroCompleto() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_comp').value.trim();
@@ -368,26 +357,36 @@
             const payload = { codigo_barras: codigo, nome_produto: nome, categoria, preco_custo: custo, porcentagem_lucro: lucro, preco_venda: venda };
 
             try {
+                let idProdutoParaEstoque = produtoExistenteId;
+
+                // 1. Atualiza ou Insere o Produto
                 if (produtoExistenteId) {
                     await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
-                    Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
                 } else {
                     const { data: novoProd, error: errProd } = await tabela_supabase.from('produtos').insert([payload]).select().single();
                     if (errProd) throw errProd;
-
-                    const qtdIni = parseInt(document.getElementById('ini_qtd').value);
-                    const loteIni = document.getElementById('ini_lote').value.trim() || 'SEM LOTE';
-                    const vencIniRaw = document.getElementById('ini_vencimento').value;
-
-                    if (qtdIni > 0 && vencIniRaw) {
-                        const partes = vencIniRaw.split('/');
-                        const vencBanco = `${partes[2]}-${partes[1]}-${partes[0]}`;
-
-                        await tabela_supabase.from('prateleira_fisica').insert([{ produto_id: novoProd.id, lote: loteIni, quantidade: qtdIni, data_vencimento: vencBanco }]);
-                        await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: novoProd.id, tipo: 'ENTRADA', quantidade: qtdIni, motivo: 'Estoque Inicial de Cadastro' }]);
-                    }
-                    Swal.fire({ title: 'Salvo Completo!', icon: 'success', timer: 1500, showConfirmButton: false });
+                    idProdutoParaEstoque = novoProd.id;
                 }
+
+                // 2. Lida com o Estoque Inicial (Agora roda para Atualização também)
+                const qtdIni = parseInt(document.getElementById('ini_qtd').value);
+                const loteIni = document.getElementById('ini_lote').value.trim() || 'SEM LOTE';
+                const vencIniRaw = document.getElementById('ini_vencimento').value;
+
+                if (qtdIni > 0 && vencIniRaw) {
+                    const partes = vencIniRaw.split('/');
+                    const vencBanco = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+                    await tabela_supabase.from('prateleira_fisica').insert([{ 
+                        produto_id: idProdutoParaEstoque, lote: loteIni, quantidade: qtdIni, data_vencimento: vencBanco 
+                    }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
+                        produto_id: idProdutoParaEstoque, tipo: 'ENTRADA', quantidade: qtdIni, motivo: produtoExistenteId ? 'Entrada via Atualização de Cadastro' : 'Estoque Inicial de Cadastro' 
+                    }]);
+                }
+
+                Swal.fire({ title: produtoExistenteId ? 'Atualizado com Sucesso!' : 'Salvo Completo!', icon: 'success', timer: 1500, showConfirmButton: false });
+                
                 limparFormulario();
                 setTimeout(() => document.getElementById('codigo_barras').focus(), 500);
             } catch (err) { Swal.fire('Erro', err.message, 'error'); }
@@ -400,7 +399,6 @@
             if (document.getElementById('reader').style.display !== 'none') stopScanner();
         }
 
-        // --- CÂMERA ---
         document.getElementById('btn-toggle-scan').addEventListener('click', () => {
             const readerDiv = document.getElementById('reader');
             const btnScan = document.getElementById('btn-toggle-scan');
