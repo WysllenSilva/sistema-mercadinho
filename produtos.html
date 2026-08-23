@@ -83,7 +83,6 @@
                     <div class="tab-btn" id="btn-tab-comp" onclick="mudarAba('comp')">📝 COMPLETO</div>
                 </div>
 
-                <!-- ABA 1: PRÉ-CADASTRO RÁPIDO -->
                 <div id="tab-pre" class="tab-content active">
                     <div class="form-group">
                         <label>Nome do Produto</label>
@@ -96,7 +95,6 @@
                     <button class="btn-acao btn-save-fast" onclick="salvarPreCadastro()">⚡ SALVAR RÁPIDO</button>
                 </div>
 
-                <!-- ABA 2: CADASTRO COMPLETO -->
                 <div id="tab-comp" class="tab-content">
                     <div class="form-group">
                         <label>Nome do Produto</label>
@@ -200,7 +198,26 @@
             }
         }
 
+        function validarEAN(ean) {
+            ean = ean.trim();
+            if (!/^\d+$/.test(ean)) return { valido: false, msg: "O código deve conter apenas números." };
+            
+            // Aceita EAN-8 e EAN-13 (os mais comuns)
+            if (![8, 12, 13, 14].includes(ean.length)) {
+                return { valido: false, msg: `Tamanho inválido! Foram lidos ${ean.length} números. Verifique se o código está legível.` };
+            }
+            
+            let suspeito = false;
+            // Se for EAN-13 e não começar com o prefixo da GS1 Brasil
+            if (ean.length === 13 && !ean.startsWith('789') && !ean.startsWith('790')) {
+                suspeito = true;
+            }
+            
+            return { valido: true, suspeito: suspeito };
+        }
+
         function checarDigitacao(ean) {
+            produtoExistenteId = null; 
             if (ean.length >= 8) buscarProdutoAPI(ean);
             else boxForm.style.display = 'none'; 
         }
@@ -308,8 +325,6 @@
             } catch (err) { console.log(err); }
         }
 
-        // --- SALVAMENTOS COM DUPLA CHECAGEM DE EAN ---
-
         async function salvarPreCadastro() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_pre').value.trim();
@@ -321,10 +336,9 @@
 
             Swal.fire({ title: 'Salvando Rápido...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            // BLINDAGEM DE DUPLICIDADE (Mesmo se for atualização, confere se o EAN digitado não é de OUTRO produto)
             const { data: checkEan } = await tabela_supabase.from('produtos').select('id, nome_produto').eq('codigo_barras', codigo).maybeSingle();
             if (checkEan && checkEan.id !== produtoExistenteId) {
-                return Swal.fire('Duplicidade Detectada!', `Este EAN já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Se deseja alterar, busque o código novamente.`, 'error');
+                return Swal.fire('Duplicidade Detectada!', `Este código já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Cuidado para não sobrescrever um produto com o EAN de outro!`, 'error');
             }
 
             const payload = { codigo_barras: codigo, nome_produto: nome };
@@ -357,10 +371,9 @@
 
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            // BLINDAGEM DE DUPLICIDADE 
             const { data: checkEan } = await tabela_supabase.from('produtos').select('id, nome_produto').eq('codigo_barras', codigo).maybeSingle();
             if (checkEan && checkEan.id !== produtoExistenteId) {
-                return Swal.fire('Duplicidade Detectada!', `Este EAN já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Se deseja alterar, busque o código novamente.`, 'error');
+                return Swal.fire('Duplicidade Detectada!', `Este código já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Cuidado para não sobrescrever um produto com o EAN de outro!`, 'error');
             }
 
             const payload = { codigo_barras: codigo, nome_produto: nome, categoria, preco_custo: custo, porcentagem_lucro: lucro, preco_venda: venda };
@@ -416,10 +429,38 @@
                 html5QrCode.start(
                     { facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } },
                     (decodedText) => {
-                        document.getElementById('codigo_barras').value = decodedText;
                         if (navigator.vibrate) navigator.vibrate(100);
                         stopScanner();
-                        buscarProdutoAPI(decodedText);
+
+                        const validador = validarEAN(decodedText);
+                        
+                        if (!validador.valido) {
+                            Swal.fire('Leitura Inválida', validador.msg, 'error');
+                            return;
+                        }
+
+                        if (validador.suspeito) {
+                            Swal.fire({
+                                title: 'Leitura Suspeita 🤔',
+                                text: `A câmera leu: ${decodedText}\n\nEsse código não parece pertencer ao padrão nacional (GS1 Brasil). Reflexos no plástico podem causar leituras erradas.\n\nConfirme se este número é exatamente o que está impresso na embalagem.`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: '✔️ É isso mesmo',
+                                cancelButtonText: '❌ Tentar de novo',
+                                confirmButtonColor: '#2563eb',
+                                cancelButtonColor: '#dc2626'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    document.getElementById('codigo_barras').value = decodedText;
+                                    buscarProdutoAPI(decodedText);
+                                } else {
+                                    document.getElementById('codigo_barras').value = "";
+                                }
+                            });
+                        } else {
+                            document.getElementById('codigo_barras').value = decodedText;
+                            buscarProdutoAPI(decodedText);
+                        }
                     }, () => {}
                 ).catch(() => stopScanner());
             } else {
