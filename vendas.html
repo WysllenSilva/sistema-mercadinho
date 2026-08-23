@@ -23,7 +23,6 @@
         
         main { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; min-height: 0; }
         
-        /* Modulo de Câmera Seguro */
         #camera-box { display: none; margin-bottom: 5px; background: var(--white); padding: 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
         #reader { width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--primary); }
         .cam-controls { display: flex; gap: 10px; margin-top: 10px; }
@@ -81,7 +80,6 @@
     </header>
 
     <main>
-        <!-- MODULO DA CÂMERA SEGURO -->
         <div id="camera-box">
             <div id="reader"></div>
             <div class="cam-controls">
@@ -149,13 +147,10 @@
             return payload + crc16(payload);
         }
 
-        // --- CÂMERA SEGURA SEM TRAVAMENTO ---
+        // --- CÂMERA ---
         async function ligarScanner() {
             const camBox = document.getElementById('camera-box');
-            
-            if (html5QrCode && html5QrCode.isScanning) {
-                return;
-            }
+            if (html5QrCode && html5QrCode.isScanning) return;
 
             camBox.style.display = 'block';
             document.getElementById('btn-flash').innerText = '🔦 FLASH';
@@ -176,7 +171,7 @@
                     (errorMessage) => {}
                 );
             } catch (err) {
-                console.error("Erro ao iniciar câmera", err);
+                console.error("Erro", err);
                 desligarScanner();
                 Swal.fire('Erro', 'Não foi possível acessar a câmera traseira.', 'error');
             }
@@ -185,9 +180,7 @@
         async function desligarScanner() {
             if (html5QrCode) {
                 try {
-                    if (html5QrCode.isScanning) {
-                        await html5QrCode.stop();
-                    }
+                    if (html5QrCode.isScanning) await html5QrCode.stop();
                     html5QrCode.clear();
                 } catch(e) {}
             }
@@ -268,7 +261,7 @@
             document.getElementById('display-total').innerText = formatarValor(totalCarrinhoBruto);
         }
 
-        // --- CHECKOUT E QRCODE ---
+        // --- CHECKOUT SEGURO ---
         window.formatarMoedaCheckout = function(el) {
             let valor = el.value.replace(/\D/g, "");
             valor = (valor / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
@@ -359,34 +352,62 @@
             `;
 
             Swal.fire({
-                title: 'Pagamento', html: htmlCheckout, showCancelButton: true, confirmButtonText: '✔️ CONFIRMAR VENDA', cancelButtonText: 'Voltar', confirmButtonColor: '#16a34a',
-                didOpen: () => { Swal.getConfirmButton().disabled = true; }
-            }).then((result) => { if (result.isConfirmed) processarVendaBanco(); });
+                title: 'Pagamento', 
+                html: htmlCheckout, 
+                showCancelButton: true, 
+                confirmButtonText: '✔️ CONFIRMAR VENDA', 
+                cancelButtonText: 'Voltar', 
+                confirmButtonColor: '#16a34a',
+                didOpen: () => { Swal.getConfirmButton().disabled = true; },
+                // A SOLUÇÃO ESTÁ AQUI: Extrai os dados antes da janela sumir
+                preConfirm: () => {
+                    return {
+                        desc: window.parseMoeda(document.getElementById('chk_desconto').value),
+                        din: window.parseMoeda(document.getElementById('chk_dinheiro').value),
+                        pix: window.parseMoeda(document.getElementById('chk_pix').value),
+                        car: window.parseMoeda(document.getElementById('chk_cartao').value)
+                    };
+                }
+            }).then((result) => { 
+                if (result.isConfirmed) {
+                    processarVendaBanco(result.value); // Envia os dados salvos
+                }
+            });
         }
 
-        async function processarVendaBanco() {
+        async function processarVendaBanco(pagamento) {
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            const vDesc = window.parseMoeda(document.getElementById('chk_desconto').value);
-            const vDin = window.parseMoeda(document.getElementById('chk_dinheiro').value);
-            const vPix = window.parseMoeda(document.getElementById('chk_pix').value);
-            const vCar = window.parseMoeda(document.getElementById('chk_cartao').value);
-            const totalComDesconto = totalCarrinhoBruto - vDesc;
-            
-            let formas = [];
-            if (vDin > 0) formas.push('DINHEIRO');
-            if (vPix > 0) formas.push('PIX');
-            if (vCar > 0) formas.push('CARTÃO');
-            const formaPrincipal = formas.length > 1 ? 'MISTO' : formas[0];
-
-            let dinheiroRealRecebido = vDin;
-            const totalPagoGeral = vDin + vPix + vCar;
-            if (totalPagoGeral > totalComDesconto && vDin > 0) dinheiroRealRecebido = vDin - (totalPagoGeral - totalComDesconto);
-
             try {
+                // Puxamos das variáveis salvas pelo preConfirm, não da tela
+                const vDesc = pagamento.desc;
+                const vDin = pagamento.din;
+                const vPix = pagamento.pix;
+                const vCar = pagamento.car;
+                
+                const totalComDesconto = totalCarrinhoBruto - vDesc;
+                
+                let formas = [];
+                if (vDin > 0) formas.push('DINHEIRO');
+                if (vPix > 0) formas.push('PIX');
+                if (vCar > 0) formas.push('CARTÃO');
+                const formaPrincipal = formas.length > 1 ? 'MISTO' : (formas[0] || 'DINHEIRO');
+
+                let dinheiroRealRecebido = vDin;
+                const totalPagoGeral = vDin + vPix + vCar;
+                if (totalPagoGeral > totalComDesconto && vDin > 0) {
+                    dinheiroRealRecebido = vDin - (totalPagoGeral - totalComDesconto);
+                }
+
                 const { data: novaVenda, error: errVenda } = await tabela_supabase.from('vendas').insert([{ 
-                    valor_total: totalComDesconto, forma_pagamento: formaPrincipal, desconto: vDesc, pgto_dinheiro: dinheiroRealRecebido, pgto_pix: vPix, pgto_cartao: vCar
+                    valor_total: totalComDesconto, 
+                    forma_pagamento: formaPrincipal, 
+                    desconto: vDesc, 
+                    pgto_dinheiro: dinheiroRealRecebido, 
+                    pgto_pix: vPix, 
+                    pgto_cartao: vCar
                 }]).select().single();
+                
                 if (errVenda) throw errVenda;
 
                 for (const item of carrinho) {
@@ -415,7 +436,10 @@
 
                 Swal.fire({ title: 'Venda Concluída!', icon: 'success', timer: 1500, showConfirmButton: false });
                 carrinho = []; document.getElementById('qtd_input').value = "1"; atualizarInterface();
-            } catch (err) { Swal.fire('Erro', err.message, 'error'); }
+                
+            } catch (err) { 
+                Swal.fire('Erro', 'Houve um erro com o banco: ' + err.message, 'error'); 
+            }
         }
 
         async function mostrarResumoCaixa() {
