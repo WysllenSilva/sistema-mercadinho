@@ -18,13 +18,12 @@
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; }
         
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
-        .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none;}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; }
         
         main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
         
-        /* Chaveador Entrada / Saída */
         .toggle-container { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
         .btn-toggle { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-weight: 800; font-size: 1rem; color: #64748b; cursor: pointer; transition: 0.2s; }
         .btn-toggle.active-entrada { background: var(--success); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -38,7 +37,6 @@
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
-        /* Display de Saldo */
         .saldo-box { display: none; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 15px; }
         .saldo-box.negativo { border-color: var(--danger); background: #fef2f2; }
         .saldo-valor { font-size: 1.5rem; font-weight: 900; color: var(--primary); }
@@ -54,7 +52,7 @@
 <body>
 
     <header>
-        <button class="btn-voltar-topo" onclick="window.location.href='menu.html'">⬅️</button>
+        <a href="menu.html" class="btn-voltar-topo">⬅️</a>
         <span class="titulo-topo">Gestão de Estoque</span>
         <div style="width: 45px;"></div>
     </header>
@@ -96,7 +94,6 @@
                 </div>
             </div>
 
-            <!-- CAMPO DE DATA AJUSTADO PARA DIGITAÇÃO COM MÁSCARA -->
             <div class="form-group" id="grupo-vencimento">
                 <label>Data de Vencimento</label>
                 <input type="text" id="data_vencimento" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric" oninput="mascaraData(this)">
@@ -123,29 +120,16 @@
         let modoAtual = 'ENTRADA';
         let saldoAtualPrateleira = 0;
 
-        const motivosEntrada = [
-            "Abastecimento (Compra)", "Devolução de Cliente", "Troca de Fornecedor", "Ajuste Manual Positivo"
-        ];
-        
-        const motivosSaida = [
-            "Perda por Vencimento", "Avaria / Quebra", "Consumo Interno (Loja)", "Ajuste Manual Negativo"
-        ];
+        const motivosEntrada = ["Abastecimento (Compra)", "Devolução de Cliente", "Troca de Fornecedor", "Ajuste Manual Positivo"];
+        const motivosSaida = ["Perda por Vencimento", "Avaria / Quebra", "Consumo Interno (Loja)", "Ajuste Manual Negativo"];
 
-        // --- MÁSCARA DE DATA DD/MM/AAAA ---
         function mascaraData(input) {
-            let v = input.value.replace(/\D/g, ""); // Remove tudo que não for número
-            
-            if (v.length > 2) {
-                v = v.substring(0, 2) + "/" + v.substring(2);
-            }
-            if (v.length > 5) {
-                v = v.substring(0, 5) + "/" + v.substring(5, 9);
-            }
-            
+            let v = input.value.replace(/\D/g, "");
+            if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
+            if (v.length > 5) v = v.substring(0, 5) + "/" + v.substring(5, 9);
             input.value = v;
         }
 
-        // --- CONTROLE DA INTERFACE ---
         function mudarModo(modo) {
             modoAtual = modo;
             const btnEntrada = document.getElementById('btn-entrada');
@@ -156,27 +140,22 @@
             if (modo === 'ENTRADA') {
                 btnEntrada.classList.add('active-entrada');
                 btnSaida.classList.remove('active-saida');
-                
                 document.getElementById('grupo-lote').style.display = 'block';
                 document.getElementById('grupo-vencimento').style.display = 'block';
-                
                 selectMotivo.innerHTML = motivosEntrada.map(m => `<option value="${m}">${m}</option>`).join('');
                 btnConfirmar.innerText = "📦 CONFIRMAR ENTRADA";
                 btnConfirmar.style.backgroundColor = "var(--success)";
             } else {
                 btnSaida.classList.add('active-saida');
                 btnEntrada.classList.remove('active-entrada');
-                
                 document.getElementById('grupo-lote').style.display = 'none';
                 document.getElementById('grupo-vencimento').style.display = 'none';
-                
                 selectMotivo.innerHTML = motivosSaida.map(m => `<option value="${m}">${m}</option>`).join('');
                 btnConfirmar.innerText = "📉 CONFIRMAR SAÍDA";
                 btnConfirmar.style.backgroundColor = "var(--danger)";
             }
         }
 
-        // --- BUSCA PRODUTO E SALDO ---
         async function buscarProduto(ean) {
             if (!ean) return;
             produtoSelecionadoId = null;
@@ -221,10 +200,8 @@
             }
         }
 
-        // --- SALVAR MOVIMENTAÇÃO ---
         async function salvarMovimentacao() {
             if (!produtoSelecionadoId) return Swal.fire('Atenção', 'Bipe um produto válido primeiro!', 'warning');
-
             const qtd = parseInt(document.getElementById('quantidade').value);
             const motivoText = document.getElementById('motivo').value;
 
@@ -239,21 +216,15 @@
                     
                     if (!dataVencRaw) return Swal.fire('Atenção', 'Data de vencimento obrigatória!', 'warning');
 
-                    // Valida se o formato está correto (DD/MM/AAAA)
                     const regexData = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
-                    if (!regexData.test(dataVencRaw)) {
-                        return Swal.fire('Atenção', 'Digite uma data válida no formato DD/MM/AAAA!', 'warning');
-                    }
+                    if (!regexData.test(dataVencRaw)) return Swal.fire('Atenção', 'Digite uma data válida no formato DD/MM/AAAA!', 'warning');
 
-                    // Converte de DD/MM/AAAA para YYYY-MM-DD (formato do banco)
                     const partes = dataVencRaw.split('/');
                     const dataVencBanco = `${partes[2]}-${partes[1]}-${partes[0]}`;
-
                     let qtdParaLancar = qtd;
 
                     if (saldoAtualPrateleira < 0) {
                         Swal.close(); 
-                        
                         const resp = await Swal.fire({
                             title: 'Estoque Negativo Detectado!',
                             html: `O sistema registra <b>${saldoAtualPrateleira} un</b> deste produto.<br><br>Deseja abater essa dívida da nova entrada ou ignorar o erro antigo e lançar a quantidade total?`,
@@ -272,29 +243,22 @@
                         } else if (resp.isDenied) {
                             qtdParaLancar = qtd;
                             await tabela_supabase.from('prateleira_fisica').delete().eq('produto_id', produtoSelecionadoId).lt('quantidade', 0);
-                        } else {
-                            return; 
-                        }
+                        } else return; 
                         
                         Swal.fire({ title: 'Salvando Ajuste...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     }
 
                     if (qtdParaLancar > 0) {
-                        await tabela_supabase.from('prateleira_fisica').insert([{ 
-                            produto_id: produtoSelecionadoId, lote: lote, quantidade: qtdParaLancar, data_vencimento: dataVencBanco 
-                        }]);
+                        await tabela_supabase.from('prateleira_fisica').insert([{ produto_id: produtoSelecionadoId, lote: lote, quantidade: qtdParaLancar, data_vencimento: dataVencBanco }]);
                     }
-
-                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
-                        produto_id: produtoSelecionadoId, tipo: 'ENTRADA', quantidade: qtd, motivo: motivoText 
-                    }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: produtoSelecionadoId, tipo: 'ENTRADA', quantidade: qtd, motivo: motivoText }]);
 
                 } else {
                     if (saldoAtualPrateleira < qtd) {
                         Swal.close();
                         const respSaida = await Swal.fire({
                             title: 'Saldo Insuficiente',
-                            text: `Você tem ${saldoAtualPrateleira} un. mas quer dar saída em ${qtd}. Isso deixará o estoque negativo. Confirmar?`,
+                            text: `Você tem ${saldoAtualPrateleira} un. mas quer dar saída em ${qtd}. Confirmar?`,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonText: 'Forçar Saída'
@@ -304,11 +268,7 @@
                     }
 
                     let qtdRestante = qtd;
-                    const { data: lotes } = await tabela_supabase
-                        .from('prateleira_fisica')
-                        .select('id, quantidade')
-                        .eq('produto_id', produtoSelecionadoId)
-                        .order('data_vencimento', { ascending: true }); 
+                    const { data: lotes } = await tabela_supabase.from('prateleira_fisica').select('id, quantidade').eq('produto_id', produtoSelecionadoId).order('data_vencimento', { ascending: true }); 
 
                     if (lotes) {
                         for (const l of lotes) {
@@ -326,14 +286,9 @@
                     }
 
                     if (qtdRestante > 0) {
-                        await tabela_supabase.from('prateleira_fisica').insert([{ 
-                            produto_id: produtoSelecionadoId, lote: 'SAIDA_FORCADA', quantidade: -qtdRestante, data_vencimento: '2099-12-31' 
-                        }]);
+                        await tabela_supabase.from('prateleira_fisica').insert([{ produto_id: produtoSelecionadoId, lote: 'SAIDA_FORCADA', quantidade: -qtdRestante, data_vencimento: '2099-12-31' }]);
                     }
-
-                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
-                        produto_id: produtoSelecionadoId, tipo: 'SAIDA_AJUSTE', quantidade: qtd, motivo: motivoText 
-                    }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: produtoSelecionadoId, tipo: 'SAIDA_AJUSTE', quantidade: qtd, motivo: motivoText }]);
                 }
 
                 Swal.fire({ title: 'Sucesso!', text: 'Estoque atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
@@ -354,7 +309,6 @@
             document.getElementById('box-saldo').style.display = 'none';
         }
 
-        // --- SCANNER ---
         function toggleScanner() {
             const div = document.getElementById('reader');
             if (div.style.display === 'block') {
@@ -375,7 +329,23 @@
             }
         }
 
-        mudarModo('ENTRADA');
+        // -------------------------------------------------------------
+        // CAPTURA DE PARÂMETROS DA URL (Integração com a tela de Produtos)
+        // -------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            mudarModo('ENTRADA');
+            
+            const params = new URLSearchParams(window.location.search);
+            const eanRedirecionado = params.get('ean');
+            
+            if (eanRedirecionado) {
+                document.getElementById('codigo_barras').value = eanRedirecionado;
+                buscarProduto(eanRedirecionado);
+                
+                // Limpa a URL na barra de endereços para ficar limpa
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
     </script>
 </body>
 </html>

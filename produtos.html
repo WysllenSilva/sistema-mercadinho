@@ -223,7 +223,8 @@
                     });
 
                     if (resp.isConfirmed) {
-                        window.location.href = 'movimentacoes.html';
+                        // Agora envia o código EAN na mochila da URL
+                        window.location.href = `movimentacoes.html?ean=${ean}`;
                         return;
                     }
 
