@@ -33,6 +33,7 @@
         .input-codigo { flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
         .input-codigo:focus, .input-qtd:focus { border-color: var(--primary); }
         .btn-scan { background: #475569; color: white; border: none; border-radius: 10px; padding: 0 15px; font-size: 1.2rem; cursor: pointer; }
+        .btn-busca-nome { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 15px; font-size: 1.2rem; cursor: pointer; }
         
         .carrinho { flex: 1; background: var(--white); border-radius: 12px; padding: 10px; overflow-y: auto; min-height: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; gap: 10px; }
@@ -51,6 +52,7 @@
         .btn-finalizar { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; cursor: pointer; letter-spacing: 1px; }
         .btn-finalizar:active { transform: scale(0.98); }
 
+        /* Estilos do Modal de Checkout */
         .modal-checkout { text-align: left; }
         .mc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .mc-label { font-weight: 700; color: var(--text); font-size: 1.1rem;}
@@ -67,6 +69,14 @@
         .mc-status.falta { background: #fee2e2; color: var(--danger); }
         .mc-status.ok { background: #dcfce7; color: var(--success); }
         .mc-status.troco { background: #fef9c3; color: #854d0e; }
+
+        /* Estilos para Resultados de Busca por Nome */
+        .search-result-item { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; }
+        .search-result-item:active { background: #f1f5f9; }
+        .search-result-item:last-child { border-bottom: none; }
+        .sri-nome { font-weight: 800; font-size: 0.95rem; color: var(--text); margin-bottom: 3px; }
+        .sri-ean { font-size: 0.75rem; color: #64748b; }
+        .sri-preco { font-size: 1.1rem; color: var(--success); font-weight: 900; }
 
         .swal2-popup { border-radius: 15px !important; }
     </style>
@@ -91,6 +101,7 @@
         <div class="scan-area">
             <input type="number" id="qtd_input" class="input-qtd" value="1" min="1">
             <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe/código..." onchange="buscarProduto(this.value)">
+            <button class="btn-busca-nome" onclick="abrirBuscaNome()">🔍</button>
             <button class="btn-scan" onclick="ligarScanner()">📸</button>
         </div>
 
@@ -199,6 +210,68 @@
                 }
             }
         }
+
+        // --- BUSCA POR NOME (NOVO MÓDULO) ---
+        function abrirBuscaNome() {
+            Swal.fire({
+                title: 'Buscar Produto',
+                html: `
+                    <input type="text" id="input-busca-nome" class="swal2-input" placeholder="Digite o nome..." onkeyup="pesquisarPorNome(this.value)" autocomplete="off" style="margin-top:0; width: 100%;">
+                    <div id="resultado-busca" style="max-height: 300px; overflow-y: auto; margin-top: 15px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: left;">
+                        <div style="padding: 15px; color: #64748b; text-align: center; font-size: 0.9rem;">Digite pelo menos 3 letras para buscar...</div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true,
+                didOpen: () => {
+                    // Dá o foco no campo automaticamente ao abrir o popup
+                    setTimeout(() => document.getElementById('input-busca-nome').focus(), 100);
+                }
+            });
+        }
+
+        window.pesquisarPorNome = async function(termo) {
+            const divResultado = document.getElementById('resultado-busca');
+            if (!termo || termo.length < 3) {
+                divResultado.innerHTML = '<div style="padding: 15px; color: #64748b; text-align: center; font-size: 0.9rem;">Digite pelo menos 3 letras...</div>';
+                return;
+            }
+
+            try {
+                // Busca no Supabase usando 'ilike' (ignora maiúsculas e minúsculas)
+                const { data, error } = await tabela_supabase
+                    .from('produtos')
+                    .select('codigo_barras, nome_produto, preco_venda')
+                    .ilike('nome_produto', `%${termo}%`)
+                    .limit(15);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    divResultado.innerHTML = '<div style="padding: 15px; color: #dc2626; text-align: center; font-weight: bold;">Nenhum produto encontrado.</div>';
+                    return;
+                }
+
+                // Desenha a lista de resultados
+                divResultado.innerHTML = data.map(p => `
+                    <div class="search-result-item" onclick="selecionarProdutoBusca('${p.codigo_barras}')">
+                        <div>
+                            <div class="sri-nome">${p.nome_produto}</div>
+                            <div class="sri-ean">EAN: ${p.codigo_barras}</div>
+                        </div>
+                        <div class="sri-preco">R$ ${p.preco_venda.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        window.selecionarProdutoBusca = function(ean) {
+            Swal.close(); // Fecha o popup
+            document.getElementById('codigo_barras').value = ean; // Preenche o código
+            buscarProduto(ean); // Aproveita a função existente para lançar no carrinho
+        };
 
         // --- CARRINHO ---
         async function buscarProduto(ean) {
@@ -359,7 +432,6 @@
                 cancelButtonText: 'Voltar', 
                 confirmButtonColor: '#16a34a',
                 didOpen: () => { Swal.getConfirmButton().disabled = true; },
-                // A SOLUÇÃO ESTÁ AQUI: Extrai os dados antes da janela sumir
                 preConfirm: () => {
                     return {
                         desc: window.parseMoeda(document.getElementById('chk_desconto').value),
@@ -370,7 +442,7 @@
                 }
             }).then((result) => { 
                 if (result.isConfirmed) {
-                    processarVendaBanco(result.value); // Envia os dados salvos
+                    processarVendaBanco(result.value);
                 }
             });
         }
@@ -379,7 +451,6 @@
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // Puxamos das variáveis salvas pelo preConfirm, não da tela
                 const vDesc = pagamento.desc;
                 const vDin = pagamento.din;
                 const vPix = pagamento.pix;
