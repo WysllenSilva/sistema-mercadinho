@@ -16,25 +16,20 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
         
-        /* Cabeçalho */
         header { background: var(--primary); padding: 15px; display: flex; align-items: center; gap: 15px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 10;}
         .btn-voltar { background: rgba(255,255,255,0.2); border: none; border-radius: 8px; width: 40px; height: 40px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;}
         .titulo-topo { font-size: 1.1rem; font-weight: 700; }
 
-        /* Abas (Tabs) */
         .tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
         .tab-btn { flex: 1; padding: 15px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); text-transform: uppercase; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s;}
         .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-        /* Barra de Busca Fixa */
         .search-container { padding: 10px 15px; background: var(--bg); flex-shrink: 0; }
         .search-input { width: 100%; padding: 12px 15px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.05rem; outline: none; background: var(--white); font-weight: 600; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
         .search-input:focus { border-color: var(--primary); }
 
-        /* Área Principal de Rolagem */
         main { flex: 1; overflow-y: auto; padding: 0 15px 15px 15px; }
 
-        /* Cards da Lista */
         .card-item { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; gap: 10px;}
         
         .info-esq { flex: 1; }
@@ -44,9 +39,7 @@
         .info-dir { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0;}
         .info-qtd { font-size: 1.3rem; font-weight: 900; color: var(--text); }
         
-        /* Badges de Status */
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; border: 1px solid; }
-        
         .badge-ok { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
         .badge-baixo { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
         .badge-atencao { background: #fffbeb; color: #854d0e; border-color: #fef08a; }
@@ -54,8 +47,10 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Oculta scrollbar para ficar mais limpo no celular */
+        .btn-edit-lote { font-size: 0.8rem; color: var(--primary); margin-top: 5px; font-weight: bold; background: #e0e7ff; padding: 4px 8px; border-radius: 6px;}
+
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
@@ -70,7 +65,6 @@
         <div class="tab-btn" id="btn-tab-lotes" onclick="mudarAba('lotes')">Lotes / Validade</div>
     </div>
 
-    <!-- NOVA BARRA DE BUSCA INSTANTÂNEA -->
     <div class="search-container">
         <input type="text" id="input-busca" class="search-input" placeholder="🔍 Buscar produto por nome..." onkeyup="filtrarListas(this.value)">
     </div>
@@ -89,9 +83,15 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Armazena os dados globalmente para o filtro funcionar sem recarregar
         let dadosGlobaisSaldo = [];
         let dadosGlobaisLotes = [];
+
+        function mascaraData(input) {
+            let v = input.value.replace(/\D/g, "");
+            if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
+            if (v.length > 5) v = v.substring(0, 5) + "/" + v.substring(5, 9);
+            input.value = v;
+        }
 
         function mudarAba(aba) {
             document.getElementById('btn-tab-saldo').classList.remove('active');
@@ -107,16 +107,15 @@
                 document.getElementById('tab-lotes').classList.add('active');
             }
             
-            // Refiltra caso o usuário troque de aba com algo já digitado
             filtrarListas(document.getElementById('input-busca').value);
         }
 
         async function carregarDadosPrateleira() {
             try {
-                // Traz todos os produtos e o array de prateleira_fisica aninhado
+                // Adicionamos a captura do 'id' da prateleira_fisica na query
                 const { data: produtos, error } = await tabela_supabase
                     .from('produtos')
-                    .select('id, nome_produto, estoque_minimo, prateleira_fisica ( lote, quantidade, data_vencimento )')
+                    .select('id, nome_produto, estoque_minimo, prateleira_fisica ( id, lote, quantidade, data_vencimento )')
                     .order('nome_produto', { ascending: true });
 
                 if (error) throw error;
@@ -135,12 +134,9 @@
                         prod.prateleira_fisica.forEach(lote => {
                             totalProduto += lote.quantidade;
                             
-                            // Calcula status de Vencimento
                             let statusLote = { classe: 'badge-ok', texto: 'Em dia' };
                             
-                            // Ignora produtos sem data ou com data 2099 (Estornos/Estoque Negativo)
                             if (lote.data_vencimento && lote.data_vencimento !== '2099-12-31') {
-                                // Ajusta timezone da data do banco
                                 const partes = lote.data_vencimento.split('-');
                                 const dataVenc = new Date(partes[0], partes[1] - 1, partes[2]);
                                 
@@ -154,9 +150,9 @@
                                 }
                             }
 
-                            // Adiciona na lista de Lotes se tiver quantidade maior que 0
                             if (lote.quantidade > 0) {
                                 dadosGlobaisLotes.push({
+                                    loteId: lote.id,
                                     nome: prod.nome_produto,
                                     loteNome: lote.lote || 'SEM LOTE',
                                     qtd: lote.quantidade,
@@ -168,7 +164,6 @@
                         });
                     }
 
-                    // Determina o status do Saldo (Estoque)
                     let statusSaldo = { classe: 'badge-ok', texto: 'Estoque OK' };
                     if (totalProduto <= min) {
                         statusSaldo = { classe: 'badge-baixo', texto: 'Estoque Baixo' };
@@ -182,10 +177,8 @@
                     });
                 });
 
-                // Ordena os lotes pelo vencimento mais próximo
                 dadosGlobaisLotes.sort((a, b) => new Date(a.vencimentoData) - new Date(b.vencimentoData));
 
-                // Renderiza a primeira vez sem filtro
                 renderizarSaldo(dadosGlobaisSaldo);
                 renderizarLotes(dadosGlobaisLotes);
 
@@ -224,7 +217,7 @@
             }
 
             container.innerHTML = dados.map(item => `
-                <div class="card-item">
+                <div class="card-item" onclick="abrirEdicaoLote('${item.loteId}', decodeURIComponent('${encodeURIComponent(item.nome)}'), decodeURIComponent('${encodeURIComponent(item.loteNome)}'), ${item.qtd}, '${item.vencimentoData}')" style="cursor: pointer;">
                     <div class="info-esq">
                         <div class="info-nome">${item.nome}</div>
                         <div class="info-sub">Lote: ${item.loteNome} | Qtd: ${item.qtd}</div>
@@ -232,32 +225,140 @@
                     </div>
                     <div class="info-dir">
                         <div class="badge ${item.status.classe}">${item.status.texto}</div>
+                        <div class="btn-edit-lote">✏️ Editar</div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // --- SISTEMA DE BUSCA INSTANTÂNEA ---
         function filtrarListas(termoDigitado) {
             const termo = termoDigitado.toLowerCase().trim();
 
             if (termo === "") {
-                // Se apagou a busca, mostra tudo de novo
                 renderizarSaldo(dadosGlobaisSaldo);
                 renderizarLotes(dadosGlobaisLotes);
                 return;
             }
 
-            // Filtra os arrays originais buscando parte do nome
             const saldoFiltrado = dadosGlobaisSaldo.filter(p => p.nome.toLowerCase().includes(termo));
             const lotesFiltrados = dadosGlobaisLotes.filter(p => p.nome.toLowerCase().includes(termo));
 
-            // Atualiza a tela apenas com os resultados filtrados
             renderizarSaldo(saldoFiltrado);
             renderizarLotes(lotesFiltrados);
         }
 
-        // Inicia o carregamento ao abrir a página
+        // --- SISTEMA DE EDIÇÃO DE LOTE (MÓDULO ADM) ---
+        window.abrirEdicaoLote = async function(loteId, prodNome, loteNome, qtd, vencData) {
+            // Verifica permissão básica
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuario_mercadinho'));
+            if (!usuarioLogado || usuarioLogado.perfil !== 'adm_sistema') {
+                return Swal.fire('Acesso Negado', 'Apenas usuários Administradores podem editar ou excluir lotes de estoque.', 'warning');
+            }
+
+            let vencStr = "";
+            if(vencData && vencData !== '2099-12-31' && vencData !== 'null') {
+                vencStr = vencData.split('-').reverse().join('/');
+            }
+
+            const html = `
+                <div style="text-align: left; font-size: 0.95rem;">
+                    <div style="margin-bottom: 15px; font-weight: 800; color: var(--primary); line-height: 1.2;">${prodNome}</div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color: var(--text);">Quantidade em Prateleira</label>
+                        <input type="number" id="edit_lote_qtd" style="width:100%; padding:10px; border:2px solid #cbd5e1; border-radius:8px; font-size:1.1rem; outline:none;" value="${qtd}">
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color: var(--text);">Identificação do Lote</label>
+                        <input type="text" id="edit_lote_nome" style="width:100%; padding:10px; border:2px solid #cbd5e1; border-radius:8px; font-size:1.1rem; outline:none;" value="${loteNome}">
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; color: var(--text);">Vencimento (DD/MM/AAAA)</label>
+                        <input type="text" id="edit_lote_venc" style="width:100%; padding:10px; border:2px solid #cbd5e1; border-radius:8px; font-size:1.1rem; outline:none;" value="${vencStr}" oninput="mascaraData(this)" maxlength="10">
+                    </div>
+                </div>
+            `;
+
+            const resp = await Swal.fire({
+                title: 'Gerenciar Lote',
+                html: html,
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: '💾 Salvar',
+                denyButtonText: '🗑️ Excluir Lote',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#16a34a',
+                denyButtonColor: '#dc2626'
+            });
+
+            if (resp.isConfirmed) {
+                const nQtd = parseInt(document.getElementById('edit_lote_qtd').value);
+                const nLote = document.getElementById('edit_lote_nome').value.trim();
+                const nVencRaw = document.getElementById('edit_lote_venc').value.trim();
+                
+                if (isNaN(nQtd) || nQtd < 0) return Swal.fire('Erro', 'Quantidade inválida.', 'error');
+                
+                let nVencBanco = '2099-12-31';
+                if (nVencRaw.length === 10) {
+                    const p = nVencRaw.split('/');
+                    nVencBanco = `${p[2]}-${p[1]}-${p[0]}`;
+                }
+
+                // Barreira de segurança ADM
+                const { value: pinDigitado } = await Swal.fire({
+                    title: 'Confirme a Alteração',
+                    text: 'Digite seu PIN de Administrador:',
+                    input: 'password',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a'
+                });
+
+                if (!pinDigitado) return;
+
+                Swal.fire({ title: 'Validando e Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
+                const { data: adminUser } = await tabela_supabase.from('usuarios').select('id').eq('pin_senha', pinDigitado).eq('perfil', 'adm_sistema').maybeSingle();
+                if (!adminUser) return Swal.fire('Acesso Negado', 'PIN inválido ou sem privilégios.', 'error');
+
+                const { error } = await tabela_supabase.from('prateleira_fisica').update({
+                    quantidade: nQtd, lote: nLote, data_vencimento: nVencBanco
+                }).eq('id', loteId);
+
+                if (error) return Swal.fire('Erro', error.message, 'error');
+                
+                Swal.fire({ title: 'Lote Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false});
+                carregarDadosPrateleira();
+
+            } else if (resp.isDenied) {
+                const { value: pinDigitado } = await Swal.fire({
+                    title: 'Atenção: Exclusão',
+                    text: 'Digite seu PIN de Administrador para EXCLUIR este lote do estoque:',
+                    input: 'password',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                    showCancelButton: true,
+                    confirmButtonText: '🗑️ Confirmar Exclusão',
+                    confirmButtonColor: '#dc2626'
+                });
+
+                if (!pinDigitado) return;
+
+                Swal.fire({ title: 'Validando e Excluindo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                const { data: adminUser } = await tabela_supabase.from('usuarios').select('id').eq('pin_senha', pinDigitado).eq('perfil', 'adm_sistema').maybeSingle();
+                if (!adminUser) return Swal.fire('Acesso Negado', 'PIN inválido ou sem privilégios.', 'error');
+
+                const { error } = await tabela_supabase.from('prateleira_fisica').delete().eq('id', loteId);
+                
+                if (error) return Swal.fire('Erro', error.message, 'error');
+                
+                Swal.fire({ title: 'Lote Excluído!', icon: 'success', timer: 1500, showConfirmButton: false});
+                carregarDadosPrateleira();
+            }
+        };
+
         carregarDadosPrateleira();
     </script>
 </body>
