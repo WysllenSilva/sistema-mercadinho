@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PDV - Mercadinho</title>
+    <title>PDV - Mercadinho Elshaday</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -15,27 +15,14 @@
             --warning: #f59e0b; --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior-y: none; }
         
-        /* SOLUÇÃO DEFINITIVA PARA TELAS DE CELULAR */
-        html, body { 
-            background-color: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%; 
-            height: 100dvh; 
-            overflow: hidden; 
-            overscroll-behavior-y: none; 
-        }
-        
-        /* Cabeçalho */
         header { background: var(--primary); padding: 15px; display: flex; align-items: center; justify-content: space-between; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; }
         .btn-header { background: rgba(255,255,255,0.2); border: none; border-radius: 8px; width: 45px; height: 45px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;}
         .btn-caixa { width: auto; padding: 0 15px; font-weight: bold; font-size: 0.9rem; }
         
         main { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; min-height: 0; }
         
-        /* Scanner e Input */
         .scan-area { display: flex; gap: 8px; flex-shrink: 0; }
         .input-qtd { width: 60px; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.2rem; text-align: center; font-weight: bold; outline: none; }
         .input-codigo { flex: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; }
@@ -44,42 +31,41 @@
         
         #reader { width: 100%; border-radius: 10px; overflow: hidden; display: none; border: 2px solid var(--primary); flex-shrink: 0; }
         
-        /* Carrinho */
         .carrinho { flex: 1; background: var(--white); border-radius: 12px; padding: 10px; overflow-y: auto; min-height: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .item-carrinho { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; gap: 10px; }
         .item-carrinho:last-child { border-bottom: none; }
-        
-        /* Novo layout do item (Excluir + Nome) */
         .item-info-group { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .btn-excluir { background: #fee2e2; color: var(--danger); border: none; border-radius: 8px; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; font-size: 1rem; cursor: pointer; flex-shrink: 0; font-weight: bold; transition: transform 0.1s;}
-        .btn-excluir:active { transform: scale(0.90); }
-        
+        .btn-excluir { background: #fee2e2; color: var(--danger); border: none; border-radius: 8px; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; font-size: 1rem; cursor: pointer; flex-shrink: 0; font-weight: bold; }
         .item-nome { font-weight: 700; font-size: 1rem; margin-bottom: 2px; line-height: 1.2;}
         .item-preco { font-size: 0.85rem; color: #64748b; }
-        
         .item-acoes { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
         .qty-control { display: flex; align-items: center; gap: 8px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
         .btn-qty { background: var(--white); border: 1px solid #cbd5e1; border-radius: 6px; width: 28px; height: 28px; font-size: 1.2rem; font-weight: bold; color: var(--primary); cursor: pointer; display: flex; justify-content: center; align-items: center;}
         .qty-display { font-weight: 800; min-width: 20px; text-align: center; font-size: 0.95rem; }
         
-        /* Resumo e Pagamento */
-        .checkout-area { 
-            flex-shrink: 0; 
-            background: var(--white); 
-            border-radius: 12px; 
-            padding: 15px; 
-            padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.08); 
-        }
-        .total-display { font-size: 2rem; font-weight: 900; text-align: center; color: var(--success); margin-bottom: 10px; }
+        .checkout-area { flex-shrink: 0; background: var(--white); border-radius: 12px; padding: 15px; padding-bottom: calc(15px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.08); }
+        .total-display { font-size: 2.2rem; font-weight: 900; text-align: center; color: var(--success); margin-bottom: 10px; }
+        .btn-finalizar { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; cursor: pointer; letter-spacing: 1px; }
+        .btn-finalizar:active { transform: scale(0.98); }
+
+        /* Estilos do Modal de Checkout */
+        .modal-checkout { text-align: left; }
+        .mc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .mc-label { font-weight: 700; color: var(--text); font-size: 1.1rem;}
+        .mc-input { width: 100px; padding: 8px; text-align: right; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; font-weight: bold; outline: none;}
+        .mc-input:focus { border-color: var(--primary); }
+        .mc-input.dinheiro { border-color: var(--warning); background: #fef3c7;}
+        .mc-input.pix { border-color: var(--success); background: #dcfce7;}
+        .mc-input.cartao { border-color: var(--primary); background: #dbeafe;}
         
-        .grid-pgto { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .btn-pgto { border: none; padding: 12px 5px; border-radius: 10px; font-weight: 800; font-size: 0.95rem; cursor: pointer; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.1s; }
-        .btn-pgto:active { transform: scale(0.95); }
-        .btn-pix { background: #10b981; }
-        .btn-dinheiro { background: #f59e0b; }
-        .btn-cartao { background: #3b82f6; }
+        .mc-divider { height: 2px; background: #e2e8f0; margin: 15px 0; }
+        .mc-total-final { font-size: 1.8rem; font-weight: 900; color: var(--text); text-align: right; }
         
+        .mc-status { padding: 15px; border-radius: 10px; text-align: center; font-weight: 900; font-size: 1.4rem; margin-top: 15px; }
+        .mc-status.falta { background: #fee2e2; color: var(--danger); }
+        .mc-status.ok { background: #dcfce7; color: var(--success); }
+        .mc-status.troco { background: #fef9c3; color: #854d0e; }
+
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
@@ -93,7 +79,6 @@
 
     <main>
         <div id="reader"></div>
-        
         <div class="scan-area">
             <input type="number" id="qtd_input" class="input-qtd" value="1" min="1">
             <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe/código..." onchange="buscarProduto(this.value)">
@@ -106,11 +91,7 @@
 
         <div class="checkout-area">
             <div class="total-display" id="display-total">R$ 0,00</div>
-            <div class="grid-pgto">
-                <button class="btn-pgto btn-pix" onclick="finalizarVenda('PIX')">PIX</button>
-                <button class="btn-pgto btn-dinheiro" onclick="finalizarVenda('DINHEIRO')">DINHEIRO</button>
-                <button class="btn-pgto btn-cartao" onclick="finalizarVenda('CARTÃO')">CARTÃO</button>
-            </div>
+            <button class="btn-finalizar" onclick="abrirCheckout()">💳 FINALIZAR COMPRA</button>
         </div>
     </main>
 
@@ -121,70 +102,61 @@
 
         let carrinho = [];
         let html5QrCode;
+        let limiteDesconto = 10; // Padrão de segurança
+        let totalCarrinhoBruto = 0;
 
-        // --- BUSCA PRODUTO E APLICA O MULTIPLICADOR ---
+        // Carrega o limite de desconto do banco ao iniciar
+        async function carregarConfiguracoes() {
+            const { data } = await tabela_supabase.from('configuracoes').select('valor').eq('chave', 'max_desconto').maybeSingle();
+            if (data) limiteDesconto = parseFloat(data.valor);
+        }
+        carregarConfiguracoes();
+
         async function buscarProduto(ean) {
             if (!ean) return;
-            
             const qtdInput = parseInt(document.getElementById('qtd_input').value) || 1;
             document.getElementById('codigo_barras').value = ""; 
 
             try {
-                const { data: prod, error } = await tabela_supabase
-                    .from('produtos')
-                    .select(`id, nome_produto, preco_venda, estoque_minimo, prateleira_fisica ( quantidade )`)
-                    .eq('codigo_barras', ean)
-                    .maybeSingle();
+                const { data: prod } = await tabela_supabase.from('produtos').select(`id, nome_produto, preco_venda, estoque_minimo, prateleira_fisica ( quantidade )`).eq('codigo_barras', ean).maybeSingle();
 
                 if (prod) {
                     const saldoAtual = prod.prateleira_fisica.reduce((acc, lote) => acc + lote.quantidade, 0);
-                    const minimo = prod.estoque_minimo || 5;
-
-                    if (saldoAtual <= minimo) {
+                    if (saldoAtual <= (prod.estoque_minimo || 5)) {
                         Swal.fire({ title: 'Estoque Baixo!', text: `${prod.nome_produto} tem apenas ${saldoAtual} un.`, icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
                     }
-
                     adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, qtdInput);
                     document.getElementById('qtd_input').value = "1"; 
-                    
                 } else {
                     Swal.fire('Não Encontrado', 'Produto não cadastrado.', 'error');
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         function adicionarAoCarrinho(id, nome, preco, qtdAdicionar) {
             const index = carrinho.findIndex(item => item.id === id);
-            if (index > -1) {
-                carrinho[index].quantidade += qtdAdicionar;
-            } else {
-                carrinho.push({ id, nome, preco, quantidade: qtdAdicionar });
-            }
+            if (index > -1) carrinho[index].quantidade += qtdAdicionar;
+            else carrinho.push({ id, nome, preco, quantidade: qtdAdicionar });
             atualizarInterface();
             if (navigator.vibrate) navigator.vibrate(100); 
         }
 
-        // --- EXCLUSÃO TOTAL DO ITEM ---
         function removerItemTotal(index) {
             carrinho.splice(index, 1);
             atualizarInterface();
-            if (navigator.vibrate) navigator.vibrate(50);
         }
 
-        // --- BOTÕES DE + E - DIRETO NO CARRINHO ---
         function alterarQtd(index, delta) {
             carrinho[index].quantidade += delta;
-            if (carrinho[index].quantidade <= 0) {
-                carrinho.splice(index, 1); // Se chegar a 0, remove
-            }
+            if (carrinho[index].quantidade <= 0) carrinho.splice(index, 1);
             atualizarInterface();
         }
 
+        function formatarValor(val) { return "R$ " + val.toFixed(2).replace('.', ','); }
+
         function atualizarInterface() {
             const lista = document.getElementById('lista-carrinho');
-            let total = 0;
+            totalCarrinhoBruto = 0;
 
             if (carrinho.length === 0) {
                 lista.innerHTML = `<div style="text-align: center; color: #64748b; margin-top: 40px; font-size: 1.1rem;">Carrinho vazio</div>`;
@@ -194,86 +166,182 @@
 
             lista.innerHTML = carrinho.map((item, index) => {
                 const subtotal = item.quantidade * item.preco;
-                total += subtotal;
+                totalCarrinhoBruto += subtotal;
                 return `
                     <div class="item-carrinho">
                         <div class="item-info-group">
                             <button class="btn-excluir" onclick="removerItemTotal(${index})">✖</button>
-                            <div>
-                                <div class="item-nome">${item.nome}</div>
-                                <div class="item-preco">Un: R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
-                            </div>
+                            <div><div class="item-nome">${item.nome}</div><div class="item-preco">Un: ${formatarValor(item.preco)}</div></div>
                         </div>
-                        
                         <div class="item-acoes">
                             <div class="qty-control">
                                 <button class="btn-qty" onclick="alterarQtd(${index}, -1)">-</button>
                                 <span class="qty-display">${item.quantidade}</span>
                                 <button class="btn-qty" onclick="alterarQtd(${index}, 1)">+</button>
                             </div>
-                            <span style="font-weight: 900; font-size: 1.1rem; color: var(--text);">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                            <span style="font-weight: 900; font-size: 1.1rem; color: var(--text);">${formatarValor(subtotal)}</span>
                         </div>
                     </div>
                 `;
             }).join('');
 
-            document.getElementById('display-total').innerText = "R$ " + total.toFixed(2).replace('.', ',');
+            document.getElementById('display-total').innerText = formatarValor(totalCarrinhoBruto);
         }
 
-        // --- MÁGICA DA VENDA COM ESTOQUE NEGATIVO ---
-        async function finalizarVenda(forma_pagamento) {
+        // --- SISTEMA DE CHECKOUT: TROCO E PAGAMENTO MISTO ---
+        window.recalcularCheckout = function() {
+            // 1. Calcula Desconto
+            let valDesconto = parseFloat(document.getElementById('chk_desconto').value) || 0;
+            const maxReais = totalCarrinhoBruto * (limiteDesconto / 100);
+            
+            if (valDesconto > maxReais) {
+                valDesconto = maxReais;
+                document.getElementById('chk_desconto').value = valDesconto.toFixed(2);
+                Swal.showValidationMessage(`Desconto máx. permitido é ${limiteDesconto}% (${formatarValor(maxReais)})`);
+            } else {
+                Swal.resetValidationMessage();
+            }
+
+            const totalComDesconto = totalCarrinhoBruto - valDesconto;
+            document.getElementById('chk_total_final').innerText = formatarValor(totalComDesconto);
+
+            // 2. Calcula Pagamentos Recebidos
+            const valDinheiro = parseFloat(document.getElementById('chk_dinheiro').value) || 0;
+            const valPix = parseFloat(document.getElementById('chk_pix').value) || 0;
+            const valCartao = parseFloat(document.getElementById('chk_cartao').value) || 0;
+            
+            const totalRecebido = valDinheiro + valPix + valCartao;
+            const diferenca = totalRecebido - totalComDesconto;
+            
+            const statusBox = document.getElementById('chk_status');
+            const btnConfirm = Swal.getConfirmButton();
+
+            if (totalRecebido === 0) {
+                statusBox.className = 'mc-status';
+                statusBox.innerText = 'Aguardando Pagamento';
+                btnConfirm.disabled = true;
+            } else if (diferenca < -0.01) {
+                statusBox.className = 'mc-status falta';
+                statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`;
+                btnConfirm.disabled = true;
+            } else if (diferenca > 0.01) {
+                // Só tem troco se teve pagamento em dinheiro
+                if (valDinheiro > 0) {
+                    statusBox.className = 'mc-status troco';
+                    statusBox.innerText = `Troco: ${formatarValor(diferenca)}`;
+                    btnConfirm.disabled = false;
+                } else {
+                    statusBox.className = 'mc-status falta';
+                    statusBox.innerText = `Valor acima (Sem dinheiro para troco)`;
+                    btnConfirm.disabled = true;
+                }
+            } else {
+                statusBox.className = 'mc-status ok';
+                statusBox.innerText = 'Valor Exato ✔️';
+                btnConfirm.disabled = false;
+            }
+        };
+
+        function abrirCheckout() {
             if (carrinho.length === 0) return Swal.fire('Atenção', 'O carrinho está vazio!', 'warning');
 
-            const totalVenda = carrinho.reduce((acc, item) => acc + (item.quantidade * item.preco), 0);
+            const htmlCheckout = `
+                <div class="modal-checkout">
+                    <div class="mc-row">
+                        <span class="mc-label">Subtotal:</span>
+                        <span style="font-size: 1.2rem; font-weight: bold;">${formatarValor(totalCarrinhoBruto)}</span>
+                    </div>
+                    <div class="mc-row">
+                        <span class="mc-label">Desconto (R$):</span>
+                        <input type="number" id="chk_desconto" class="mc-input" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    </div>
+                    
+                    <div class="mc-divider"></div>
+                    <div class="mc-row">
+                        <span class="mc-label" style="font-size: 1.4rem;">Total a Pagar:</span>
+                        <span class="mc-total-final" id="chk_total_final">${formatarValor(totalCarrinhoBruto)}</span>
+                    </div>
+                    <div class="mc-divider"></div>
 
-            const result = await Swal.fire({
-                title: 'Confirmar Venda?',
-                html: `Total: <b>R$ ${totalVenda.toFixed(2).replace('.', ',')}</b> no <b>${forma_pagamento}</b>`,
-                icon: 'question',
+                    <div style="font-weight: 800; margin-bottom: 10px; color: #64748b;">VALORES RECEBIDOS:</div>
+                    <div class="mc-row">
+                        <span class="mc-label">🟡 Dinheiro:</span>
+                        <input type="number" id="chk_dinheiro" class="mc-input dinheiro" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    </div>
+                    <div class="mc-row">
+                        <span class="mc-label">🟢 PIX:</span>
+                        <input type="number" id="chk_pix" class="mc-input pix" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    </div>
+                    <div class="mc-row">
+                        <span class="mc-label">🔵 Cartão:</span>
+                        <input type="number" id="chk_cartao" class="mc-input cartao" placeholder="0.00" step="0.01" min="0" oninput="window.recalcularCheckout()">
+                    </div>
+
+                    <div id="chk_status" class="mc-status">Aguardando Pagamento</div>
+                </div>
+            `;
+
+            Swal.fire({
+                title: 'Pagamento',
+                html: htmlCheckout,
                 showCancelButton: true,
+                confirmButtonText: '✔️ CONFIRMAR VENDA',
+                cancelButtonText: 'Voltar',
                 confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#dc2626',
-                confirmButtonText: 'Sim, Finalizar'
+                didOpen: () => {
+                    Swal.getConfirmButton().disabled = true; // Começa desabilitado até bater o valor
+                }
+            }).then((result) => {
+                if (result.isConfirmed) processarVendaBanco();
             });
+        }
 
-            if (!result.isConfirmed) return;
-
+        async function processarVendaBanco() {
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+            const vDesc = parseFloat(document.getElementById('chk_desconto').value) || 0;
+            const vDin = parseFloat(document.getElementById('chk_dinheiro').value) || 0;
+            const vPix = parseFloat(document.getElementById('chk_pix').value) || 0;
+            const vCar = parseFloat(document.getElementById('chk_cartao').value) || 0;
+            
+            const totalComDesconto = totalCarrinhoBruto - vDesc;
+            
+            // Define o rótulo principal para o Histórico (Misto se tiver mais de um)
+            let formas = [];
+            if (vDin > 0) formas.push('DINHEIRO');
+            if (vPix > 0) formas.push('PIX');
+            if (vCar > 0) formas.push('CARTÃO');
+            const formaPrincipal = formas.length > 1 ? 'MISTO' : formas[0];
+
             try {
-                const { data: novaVenda, error: errVenda } = await tabela_supabase
-                    .from('vendas')
-                    .insert([{ valor_total: totalVenda, forma_pagamento: forma_pagamento }])
-                    .select().single();
+                // 1. Cria a Venda
+                const { data: novaVenda, error: errVenda } = await tabela_supabase.from('vendas').insert([{ 
+                    valor_total: totalComDesconto, 
+                    forma_pagamento: formaPrincipal,
+                    desconto: vDesc,
+                    pgto_dinheiro: vDin,
+                    pgto_pix: vPix,
+                    pgto_cartao: vCar
+                }]).select().single();
                 if (errVenda) throw errVenda;
 
+                // 2. Registra itens e abate estoque
                 for (const item of carrinho) {
-                    await tabela_supabase.from('itens_venda').insert([{
-                        venda_id: novaVenda.id, produto_id: item.id, quantidade: item.quantidade, preco_unitario: item.preco
-                    }]);
-
-                    await tabela_supabase.from('movimentacoes_estoque').insert([{
-                        produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: 'Venda PDV'
-                    }]);
+                    await tabela_supabase.from('itens_venda').insert([{ venda_id: novaVenda.id, produto_id: item.id, quantidade: item.quantidade, preco_unitario: item.preco }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: 'Venda PDV' }]);
 
                     let qtdRestante = item.quantidade;
-                    const { data: lotes } = await tabela_supabase
-                        .from('prateleira_fisica')
-                        .select('id, quantidade')
-                        .eq('produto_id', item.id)
-                        .order('data_vencimento', { ascending: true }); 
+                    const { data: lotes } = await tabela_supabase.from('prateleira_fisica').select('id, quantidade').eq('produto_id', item.id).order('data_vencimento', { ascending: true }); 
 
                     if (lotes) {
                         for (const lote of lotes) {
                             if (qtdRestante <= 0) break; 
-                            
                             if (lote.quantidade > 0) {
                                 if (lote.quantidade <= qtdRestante) {
                                     qtdRestante -= lote.quantidade;
                                     await tabela_supabase.from('prateleira_fisica').delete().eq('id', lote.id);
                                 } else {
-                                    const novoSaldo = lote.quantidade - qtdRestante;
-                                    await tabela_supabase.from('prateleira_fisica').update({ quantidade: novoSaldo }).eq('id', lote.id);
+                                    await tabela_supabase.from('prateleira_fisica').update({ quantidade: lote.quantidade - qtdRestante }).eq('id', lote.id);
                                     qtdRestante = 0;
                                 }
                             }
@@ -281,12 +349,7 @@
                     }
 
                     if (qtdRestante > 0) {
-                        await tabela_supabase.from('prateleira_fisica').insert([{ 
-                            produto_id: item.id, 
-                            lote: 'ESTOQUE_NEGATIVO', 
-                            quantidade: -qtdRestante, 
-                            data_vencimento: '2099-12-31' 
-                        }]);
+                        await tabela_supabase.from('prateleira_fisica').insert([{ produto_id: item.id, lote: 'ESTOQUE_NEGATIVO', quantidade: -qtdRestante, data_vencimento: '2099-12-31' }]);
                     }
                 }
 
@@ -309,37 +372,28 @@
                 const start = new Date(hoje.setHours(0,0,0,0)).toISOString();
                 const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
 
-                const { data: vendasDia, error } = await tabela_supabase
-                    .from('vendas')
-                    .select('valor_total, forma_pagamento')
-                    .gte('data_venda', start)
-                    .lte('data_venda', end);
-                
+                const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end);
                 if (error) throw error;
 
-                let totalGeral = 0;
-                let totais = { PIX: 0, DINHEIRO: 0, CARTÃO: 0 };
-
+                let totais = { PIX: 0, DINHEIRO: 0, CARTAO: 0, TOTAL: 0 };
                 vendasDia.forEach(v => {
-                    totalGeral += v.valor_total;
-                    totais[v.forma_pagamento] += v.valor_total;
+                    totais.TOTAL += v.valor_total;
+                    totais.DINHEIRO += v.pgto_dinheiro || 0;
+                    totais.PIX += v.pgto_pix || 0;
+                    totais.CARTAO += v.pgto_cartao || 0;
                 });
-
-                const formatMoeda = (val) => "R$ " + val.toFixed(2).replace('.', ',');
 
                 const relatorioHTML = `
                     <div style="text-align: left; font-size: 1.1rem; padding: 10px;">
-                        <p style="border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">🟢 <b>PIX:</b> ${formatMoeda(totais.PIX)}</p>
-                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatMoeda(totais.DINHEIRO)}</p>
-                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatMoeda(totais.CARTÃO)}</p>
-                        <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Total do Dia: <br> ${formatMoeda(totalGeral)}</h3>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">🟢 <b>PIX:</b> ${formatarValor(totais.PIX)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatarValor(totais.DINHEIRO)}</p>
+                        <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatarValor(totais.CARTAO)}</p>
+                        <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Faturamento Líquido: <br> ${formatarValor(totais.TOTAL)}</h3>
                     </div>
                 `;
 
                 Swal.fire({ title: 'Caixa de Hoje', html: relatorioHTML, confirmButtonText: 'Fechar', confirmButtonColor: '#475569' });
-            } catch(err) {
-                Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error');
-            }
+            } catch(err) { Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error'); }
         }
 
         function toggleScanner() {
@@ -350,14 +404,9 @@
             } else {
                 div.style.display = 'block';
                 html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start(
-                    { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
-                    (decodedText) => {
-                        html5QrCode.stop();
-                        div.style.display = 'none';
-                        buscarProduto(decodedText);
-                    }, () => {}
-                );
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, (decodedText) => {
+                    html5QrCode.stop(); div.style.display = 'none'; buscarProduto(decodedText);
+                }, () => {});
             }
         }
     </script>
