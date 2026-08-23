@@ -10,7 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        
         :root {
             --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --warning: #f59e0b;
             --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
@@ -39,7 +38,6 @@
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* Bloco exclusivo para estoque inicial de novos produtos */
         .bloco-estoque-inicial { background: #f1f5f9; padding: 12px; border-radius: 10px; border: 1px dashed #cbd5e1; margin-bottom: 15px; }
         .bloco-estoque-inicial h4 { font-size: 0.9rem; color: #475569; margin-bottom: 10px; font-weight: 700; text-transform: uppercase; }
 
@@ -65,7 +63,6 @@
 
     <main>
         <div class="container">
-            <!-- BLOCO DE LEITURA -->
             <div class="form-group">
                 <label for="codigo_barras">Código de Barras (EAN)</label>
                 <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
@@ -74,7 +71,6 @@
                 <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR CÓDIGO</button>
             </div>
 
-            <!-- BLOCO DO FORMULÁRIO -->
             <div id="form-detalhes">
                 <div class="form-group">
                     <label for="nome">Nome do Produto</label>
@@ -91,7 +87,6 @@
                     </div>
                 </div>
 
-                <!-- MATEMÁTICA DE PREÇOS -->
                 <div class="grid-3">
                     <div class="form-group">
                         <label for="preco_custo">Custo (R$)</label>
@@ -107,7 +102,6 @@
                     </div>
                 </div>
 
-                <!-- ESTOQUE INICIAL (Apenas visível se for NOVO produto) -->
                 <div class="bloco-estoque-inicial" id="bloco-estoque-novo">
                     <h4>📦 Estoque Inicial (Opcional)</h4>
                     <div class="grid-2">
@@ -126,7 +120,6 @@
                     </div>
                 </div>
 
-                <!-- BOTÕES DINÂMICOS -->
                 <div class="acoes-container" id="box-btn-novo">
                     <button class="btn-acao btn-save" onclick="salvarProduto()">💾 SALVAR E ALIMENTAR ESTOQUE</button>
                 </div>
@@ -184,11 +177,18 @@
             else boxForm.style.display = 'none'; 
         }
 
-        function parseValor(s) { return parseFloat(s.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0; }
-        function formataInputMoeda(v) { return v.toFixed(2).replace('.', ','); }
+        function parseValor(s) { 
+            return parseFloat(s.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0; 
+        }
+        
+        function formataInputMoeda(v) { 
+            return v.toFixed(2).replace('.', ','); 
+        }
+        
+        // CORREÇÃO APLICADA AQUI
         function formatarMoeda(el) {
             let v = el.value.replace(/\D/g, "");
-            v = (v / 100).toFixed(2) + "").replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            v = (v / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
             el.value = v === "0,00" ? "" : v;
         }
 
@@ -204,7 +204,6 @@
             if (custo > 0 && venda > custo) document.getElementById('porcentagem_lucro').value = Math.round(((venda - custo) / custo) * 100);
         }
 
-        // --- BUSCA INTELIGENTE E VERIFICAÇÃO DE DUPLICIDADE ---
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
 
@@ -212,7 +211,6 @@
                 const { data: prodLocal } = await tabela_supabase.from('produtos').select('*').eq('codigo_barras', ean).maybeSingle();
 
                 if (prodLocal) {
-                    // JÁ CADASTRADO: Pergunta se quer ir para a Gestão de Estoque
                     boxForm.style.display = 'none';
                     
                     const resp = await Swal.fire({
@@ -229,7 +227,6 @@
                         return;
                     }
 
-                    // Se escolheu atualizar aqui mesmo:
                     boxForm.style.display = 'block';
                     produtoExistenteId = prodLocal.id;
                     document.getElementById('nome').value = prodLocal.nome_produto || "";
@@ -238,15 +235,14 @@
                     document.getElementById('porcentagem_lucro').value = prodLocal.porcentagem_lucro || "";
                     document.getElementById('preco_venda').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
                     
-                    blocoEstoqueNovo.style.display = 'none'; // Esconde estoque inicial pois o produto já existe
+                    blocoEstoqueNovo.style.display = 'none'; 
                     boxNovo.style.display = 'none';
                     boxEditar.style.display = 'flex';
 
                 } else {
-                    // PRODUTO NOVO
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
-                    blocoEstoqueNovo.style.display = 'block'; // Mostra campos de estoque inicial
+                    blocoEstoqueNovo.style.display = 'block'; 
                     boxNovo.style.display = 'flex';
                     boxEditar.style.display = 'none';
                     
@@ -265,7 +261,6 @@
             } catch (err) { console.log(err); }
         }
 
-        // --- SALVAR / ATUALIZAR ---
         async function salvarProduto() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome').value.trim();
@@ -288,11 +283,9 @@
                     if (error) throw error;
                     Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false });
                 } else {
-                    // 1. Salva o Produto
                     const { data: novoProd, error: errProd } = await tabela_supabase.from('produtos').insert([payload]).select().single();
                     if (errProd) throw errProd;
 
-                    // 2. Se informou estoque inicial, já alimenta a prateleira e a movimentação
                     const qtdIni = parseInt(document.getElementById('ini_qtd').value);
                     const loteIni = document.getElementById('ini_lote').value.trim() || 'SEM LOTE';
                     const vencIniRaw = document.getElementById('ini_vencimento').value;
