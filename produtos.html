@@ -204,6 +204,10 @@
         }
 
         function checarDigitacao(ean) {
+            // Camada 1: Se o usuário editar o código manualmente, resetamos o ID existente.
+            // Isso previne que ele sobrescreva acidentalmente outro produto!
+            produtoExistenteId = null; 
+            
             if (ean.length >= 8) buscarProdutoAPI(ean);
             else boxForm.style.display = 'none'; 
         }
@@ -270,12 +274,10 @@
                         document.getElementById('nome_pre').value = prodLocal.nome_produto || "";
                         document.getElementById('preco_venda_pre').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
                         
-                        // Zera os campos de estoque para o usuário não lançar estoque duplicado sem querer
                         document.getElementById('ini_qtd').value = "";
                         document.getElementById('ini_lote').value = "";
                         document.getElementById('ini_vencimento').value = "";
 
-                        // AGORA O BLOCO DE ESTOQUE FICA VISÍVEL NA ATUALIZAÇÃO
                         document.getElementById('bloco-estoque-novo').style.display = 'block'; 
                         document.getElementById('btn-salvar-comp').style.display = 'none';
                         document.getElementById('btn-atualizar-comp').style.display = 'flex';
@@ -313,6 +315,8 @@
             } catch (err) { console.log(err); }
         }
 
+        // --- SALVAMENTOS BLINDADOS ---
+
         async function salvarPreCadastro() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_pre').value.trim();
@@ -323,6 +327,14 @@
             }
 
             Swal.fire({ title: 'Salvando Rápido...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            // Camada 2: Verificação de Duplicidade no Banco
+            if (!produtoExistenteId) {
+                const { data: checkEan } = await tabela_supabase.from('produtos').select('nome_produto').eq('codigo_barras', codigo).maybeSingle();
+                if (checkEan) {
+                    return Swal.fire('Duplicidade Detectada!', `Este EAN já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Se deseja alterar, busque o código novamente.`, 'error');
+                }
+            }
 
             const payload = { codigo_barras: codigo, nome_produto: nome };
             if (venda > 0) payload.preco_venda = venda; 
@@ -354,12 +366,19 @@
 
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+            // Camada 2: Verificação de Duplicidade no Banco
+            if (!produtoExistenteId) {
+                const { data: checkEan } = await tabela_supabase.from('produtos').select('nome_produto').eq('codigo_barras', codigo).maybeSingle();
+                if (checkEan) {
+                    return Swal.fire('Duplicidade Detectada!', `Este EAN já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Se deseja alterar, busque o código novamente.`, 'error');
+                }
+            }
+
             const payload = { codigo_barras: codigo, nome_produto: nome, categoria, preco_custo: custo, porcentagem_lucro: lucro, preco_venda: venda };
 
             try {
                 let idProdutoParaEstoque = produtoExistenteId;
 
-                // 1. Atualiza ou Insere o Produto
                 if (produtoExistenteId) {
                     await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
                 } else {
@@ -368,7 +387,6 @@
                     idProdutoParaEstoque = novoProd.id;
                 }
 
-                // 2. Lida com o Estoque Inicial (Agora roda para Atualização também)
                 const qtdIni = parseInt(document.getElementById('ini_qtd').value);
                 const loteIni = document.getElementById('ini_lote').value.trim() || 'SEM LOTE';
                 const vencIniRaw = document.getElementById('ini_vencimento').value;
