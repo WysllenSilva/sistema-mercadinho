@@ -18,34 +18,51 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         
-        /* Trava a tela para caber perfeitamente no celular sem rolar a página inteira */
+        /* Estrutura de "Sanduíche" travada na tela */
         html, body { 
             background-color: var(--bg); 
             color: var(--text); 
             display: flex; 
             flex-direction: column; 
-            height: 100vh; 
-            height: 100dvh;
-            overflow: hidden; 
-            padding: 15px; 
-            align-items: center; 
+            height: 100%; 
+            height: 100dvh; /* Altura exata do celular */
+            overflow: hidden; /* Trava rolagem geral */
         }
 
-        .app-title { font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: 2px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
-        .user-welcome { font-size: 0.85rem; color: #64748b; margin-bottom: 15px; font-weight: 600; text-align: center; flex-shrink: 0; }
+        /* Topo Fixo */
+        .header-area {
+            padding: 25px 15px 10px 15px;
+            flex-shrink: 0;
+            background-color: var(--bg);
+            z-index: 10;
+        }
+        .app-title { font-size: 1.8rem; font-weight: 800; text-align: center; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
+        .user-welcome { font-size: 0.95rem; color: #64748b; font-weight: 600; text-align: center; }
 
-        /* Container com rolagem interna caso tenha muitos botões */
-        .menu-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 10px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        /* Miolo Rolável (onde ficam os botões) */
+        .menu-container { 
+            width: 100%; 
+            max-width: 500px; 
+            margin: 0 auto;
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            overflow-y: auto; /* Rolagem apenas aqui dentro */
+            flex: 1; 
+            padding: 15px;
+        }
 
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* Botões com tamanho original restaurado */
         .btn-menu { 
-            border: none; border-radius: 12px; padding: 15px 10px; font-size: 1rem; font-weight: 800; 
+            border: none; border-radius: 12px; padding: 22px 10px; font-size: 1.1rem; font-weight: 800; 
             cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; gap: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+            justify-content: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
             text-decoration: none; color: white; transition: transform 0.1s;
         }
         .btn-menu:active { transform: scale(0.96); }
-        .btn-menu i { font-size: 1.5rem; font-style: normal; }
+        .btn-menu i { font-size: 1.8rem; font-style: normal; }
 
         .btn-vender { background-color: var(--success); }
         .btn-historico { background-color: var(--gray-light); color: var(--text); }
@@ -53,20 +70,38 @@
         .btn-usuarios { background-color: var(--admin-color); } 
         .btn-configs { background-color: var(--admin-dark); } 
 
-        .divider { height: 1px; background-color: #cbd5e1; margin: 2px 0; border-radius: 2px; }
+        .divider { height: 2px; background-color: #cbd5e1; margin: 5px 0; border-radius: 2px; }
 
-        /* Rodapé fixo com o botão Sair sempre visível */
-        .footer-action { width: 100%; max-width: 500px; display: flex; justify-content: center; padding-top: 10px; flex-shrink: 0; }
-        .btn-sair { background-color: var(--danger); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; justify-content: center;}
+        /* Rodapé Fixo (Botão Sair) */
+        .footer-action { 
+            width: 100%; 
+            background: var(--white);
+            padding: 15px; 
+            padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* Margem p/ barra do iPhone/Android */
+            flex-shrink: 0; 
+            display: flex; 
+            justify-content: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05); 
+            z-index: 10;
+        }
+        .btn-sair { 
+            background-color: var(--danger); color: white; border: none; border-radius: 10px; 
+            padding: 15px 20px; font-size: 1.1rem; font-weight: 800; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 500px;
+        }
+        .btn-sair:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-    <h1 class="app-title">MERCADINHO</h1>
-    <div id="welcome-msg" class="user-welcome">Carregando usuário...</div>
+    <!-- CABEÇALHO FIXO -->
+    <div class="header-area">
+        <h1 class="app-title">MERCADINHO</h1>
+        <div id="welcome-msg" class="user-welcome">Carregando usuário...</div>
+    </div>
 
-    <div class="menu-container" id="menu-scroll">
-        <!-- BLOCO 1: OPERAÇÃO -->
+    <!-- MIOLO COM ROLAGEM -->
+    <div class="menu-container">
         <div class="grid-2">
             <a href="vendas.html" class="btn-menu btn-vender"><i>🛒</i> VENDER</a>
             <a href="historico.html" class="btn-menu btn-historico"><i>📄</i> HISTÓRICO</a>
@@ -74,7 +109,6 @@
 
         <div class="divider"></div>
 
-        <!-- BLOCO 2: GESTÃO -->
         <div class="grid-2">
             <a href="produtos.html" class="btn-menu btn-acao"><i>📦</i> PRODUTOS</a>
             <a href="movimentacoes.html" class="btn-menu btn-acao"><i>📥</i> ESTOQUE</a>
@@ -82,10 +116,10 @@
         
         <a href="prateleira.html" class="btn-menu btn-acao" style="width: 100%;"><i>🏷️</i> PRATELEIRA / VALIDADES</a>
 
-        <!-- BLOCO 3: ADMIN (Injetado via JS) -->
-        <div id="slot-admin" class="grid-2"></div>
+        <div id="slot-admin" class="grid-2" style="margin-top: 5px;"></div>
     </div>
 
+    <!-- RODAPÉ FIXO -->
     <div class="footer-action">
         <button class="btn-sair" onclick="fazerLogout()">❌ SAIR DO SISTEMA</button>
     </div>
