@@ -23,7 +23,7 @@
         
         main { flex: 1; display: flex; flex-direction: column; padding: 10px; gap: 10px; min-height: 0; }
         
-        /* Modulo de Câmera */
+        /* Modulo de Câmera Seguro */
         #camera-box { display: none; margin-bottom: 5px; background: var(--white); padding: 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
         #reader { width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--primary); }
         .cam-controls { display: flex; gap: 10px; margin-top: 10px; }
@@ -81,7 +81,7 @@
     </header>
 
     <main>
-        <!-- NOVO MODULO DA CÂMERA -->
+        <!-- MODULO DA CÂMERA SEGURO -->
         <div id="camera-box">
             <div id="reader"></div>
             <div class="cam-controls">
@@ -113,7 +113,6 @@
         let totalCarrinhoBruto = 0;
         let configPix = { chave: "", nome: "", cidade: "" };
 
-        // Variáveis de Controle da Câmera
         let html5QrCode = null;
         let isFlashOn = false;
 
@@ -150,11 +149,10 @@
             return payload + crc16(payload);
         }
 
-        // --- SISTEMA DA CÂMERA (CORRIGIDO COM FOCO E FLASH) ---
+        // --- CÂMERA SEGURA SEM TRAVAMENTO ---
         async function ligarScanner() {
             const camBox = document.getElementById('camera-box');
             
-            // Se já tiver uma instância rodando, não tenta iniciar de novo
             if (html5QrCode && html5QrCode.isScanning) {
                 return;
             }
@@ -165,23 +163,17 @@
 
             html5QrCode = new Html5Qrcode("reader");
 
-            const videoConfig = { 
-                facingMode: "environment", 
-                focusMode: "continuous" // Força o Android/iOS a não travar o foco no fundo
-            };
-
             try {
-                await html5QrCode.start(videoConfig, { fps: 10, qrbox: { width: 250, height: 150 } }, 
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 15, qrbox: { width: 250, height: 150 } }, 
                     (decodedText) => {
-                        // Quando ler com sucesso: vibra, desliga a câmera e busca o produto
                         if (navigator.vibrate) navigator.vibrate(100);
                         desligarScanner();
                         document.getElementById('codigo_barras').value = decodedText;
                         buscarProduto(decodedText);
                     }, 
-                    (errorMessage) => {
-                        // Erros normais de leitura frame-a-frame são ignorados
-                    }
+                    (errorMessage) => {}
                 );
             } catch (err) {
                 console.error("Erro ao iniciar câmera", err);
@@ -193,7 +185,9 @@
         async function desligarScanner() {
             if (html5QrCode) {
                 try {
-                    await html5QrCode.stop();
+                    if (html5QrCode.isScanning) {
+                        await html5QrCode.stop();
+                    }
                     html5QrCode.clear();
                 } catch(e) {}
             }
@@ -201,13 +195,13 @@
         }
 
         async function toggleFlash() {
-            if (html5QrCode && html5QrCode.getState() === 2) { // Estado 2 = Está escaneando
+            if (html5QrCode && html5QrCode.isScanning) {
                 try {
                     isFlashOn = !isFlashOn;
                     await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isFlashOn }] });
                     document.getElementById('btn-flash').innerText = isFlashOn ? '🔦 DESLIGAR' : '🔦 FLASH';
                 } catch (e) {
-                    isFlashOn = !isFlashOn; // Reverte se falhar
+                    isFlashOn = !isFlashOn;
                     Swal.fire({toast:true, position:'top-end', icon:'error', title:'Flash não suportado neste aparelho', showConfirmButton:false, timer:2000});
                 }
             }
@@ -274,7 +268,7 @@
             document.getElementById('display-total').innerText = formatarValor(totalCarrinhoBruto);
         }
 
-        // --- SISTEMA DE CHECKOUT E QRCODE ---
+        // --- CHECKOUT E QRCODE ---
         window.formatarMoedaCheckout = function(el) {
             let valor = el.value.replace(/\D/g, "");
             valor = (valor / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");

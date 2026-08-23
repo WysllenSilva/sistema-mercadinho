@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Menu Principal - Mercadinho Elshaday</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -17,22 +17,35 @@
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; padding: 20px; align-items: center; }
+        
+        /* Trava a tela para caber perfeitamente no celular sem rolar a página inteira */
+        html, body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            height: 100dvh;
+            overflow: hidden; 
+            padding: 15px; 
+            align-items: center; 
+        }
 
-        .app-title { font-size: 1.8rem; font-weight: 800; text-align: center; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
-        .user-welcome { font-size: 0.9rem; color: #64748b; margin-bottom: 25px; font-weight: 600; text-align: center; }
+        .app-title { font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: 2px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+        .user-welcome { font-size: 0.85rem; color: #64748b; margin-bottom: 15px; font-weight: 600; text-align: center; flex-shrink: 0; }
 
-        .menu-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        /* Container com rolagem interna caso tenha muitos botões */
+        .menu-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         .btn-menu { 
-            border: none; border-radius: 12px; padding: 20px 10px; font-size: 1.05rem; font-weight: 800; 
+            border: none; border-radius: 12px; padding: 15px 10px; font-size: 1rem; font-weight: 800; 
             cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            justify-content: center; gap: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
             text-decoration: none; color: white; transition: transform 0.1s;
         }
         .btn-menu:active { transform: scale(0.96); }
-        .btn-menu i { font-size: 1.8rem; font-style: normal; }
+        .btn-menu i { font-size: 1.5rem; font-style: normal; }
 
         .btn-vender { background-color: var(--success); }
         .btn-historico { background-color: var(--gray-light); color: var(--text); }
@@ -40,10 +53,11 @@
         .btn-usuarios { background-color: var(--admin-color); } 
         .btn-configs { background-color: var(--admin-dark); } 
 
-        .divider { height: 2px; background-color: #cbd5e1; margin: 5px 0; border-radius: 2px; }
+        .divider { height: 1px; background-color: #cbd5e1; margin: 2px 0; border-radius: 2px; }
 
-        .footer-action { margin-top: auto; display: flex; justify-content: center; padding-top: 30px; }
-        .btn-sair { background-color: var(--danger); color: white; border: none; border-radius: 8px; padding: 12px 25px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        /* Rodapé fixo com o botão Sair sempre visível */
+        .footer-action { width: 100%; max-width: 500px; display: flex; justify-content: center; padding-top: 10px; flex-shrink: 0; }
+        .btn-sair { background-color: var(--danger); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; justify-content: center;}
     </style>
 </head>
 <body>
@@ -51,7 +65,7 @@
     <h1 class="app-title">MERCADINHO</h1>
     <div id="welcome-msg" class="user-welcome">Carregando usuário...</div>
 
-    <div class="menu-container">
+    <div class="menu-container" id="menu-scroll">
         <!-- BLOCO 1: OPERAÇÃO -->
         <div class="grid-2">
             <a href="vendas.html" class="btn-menu btn-vender"><i>🛒</i> VENDER</a>
@@ -61,18 +75,19 @@
         <div class="divider"></div>
 
         <!-- BLOCO 2: GESTÃO -->
-        <div class="grid-2" id="grid-gestao">
+        <div class="grid-2">
             <a href="produtos.html" class="btn-menu btn-acao"><i>📦</i> PRODUTOS</a>
             <a href="movimentacoes.html" class="btn-menu btn-acao"><i>📥</i> ESTOQUE</a>
-            <a href="prateleira.html" class="btn-menu btn-acao" style="grid-column: span 2;"><i>🏷️</i> PRATELEIRA</a>
         </div>
+        
+        <a href="prateleira.html" class="btn-menu btn-acao" style="width: 100%;"><i>🏷️</i> PRATELEIRA / VALIDADES</a>
 
         <!-- BLOCO 3: ADMIN (Injetado via JS) -->
-        <div id="slot-admin" class="grid-2" style="margin-top: 10px;"></div>
+        <div id="slot-admin" class="grid-2"></div>
     </div>
 
     <div class="footer-action">
-        <button class="btn-sair" onclick="fazerLogout()">❌ SAIR</button>
+        <button class="btn-sair" onclick="fazerLogout()">❌ SAIR DO SISTEMA</button>
     </div>
 
     <script>
@@ -85,7 +100,7 @@
 
             if (usuarioLogado.perfil === 'adm_sistema') {
                 document.getElementById('slot-admin').innerHTML = `
-                    <div class="divider" style="grid-column: span 2; margin: 0;"></div>
+                    <div class="divider" style="grid-column: span 2;"></div>
                     <a href="usuarios.html" class="btn-menu btn-usuarios"><i>👥</i> USUÁRIOS</a>
                     <a href="configuracoes.html" class="btn-menu btn-configs"><i>⚙️</i> AJUSTES</a>
                 `;
