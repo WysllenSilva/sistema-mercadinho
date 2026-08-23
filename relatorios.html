@@ -154,33 +154,33 @@
         async function gerarRelatorios() {
             Swal.fire({ title: 'Analisando dados...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            const start = new Date(`${document.getElementById('data_inicio').value}T00:00:00`).toISOString();
-            const end = new Date(`${document.getElementById('data_fim').value}T23:59:59`).toISOString();
-
             try {
+                const start = new Date(`${document.getElementById('data_inicio').value}T00:00:00`).toISOString();
+                const end = new Date(`${document.getElementById('data_fim').value}T23:59:59`).toISOString();
+
                 // 1. BUSCA TODAS AS VENDAS E ITENS DO PERÍODO
                 const { data: vendas, error: errVendas } = await tabela_supabase
                     .from('vendas')
-                    .select(`
-                        id, valor_total, pgto_dinheiro, pgto_pix, pgto_cartao,
-                        itens_venda (quantidade, preco_unitario, produtos (nome_produto, preco_custo))
-                    `)
+                    .select(`id, valor_total, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produtos (nome_produto, preco_custo))`)
                     .gte('data_venda', start).lte('data_venda', end);
-                if (errVendas) throw errVendas;
+                
+                if (errVendas) throw new Error("Vendas: " + errVendas.message);
 
-                // 2. BUSCA AS PERDAS (SAÍDAS MANUAIS/AVARIAS)
+                // 2. BUSCA AS PERDAS (Corrigido para created_at nativo do Supabase)
                 const { data: perdas, error: errPerdas } = await tabela_supabase
                     .from('movimentacoes_estoque')
                     .select(`quantidade, produtos(preco_custo)`)
                     .eq('tipo', 'SAIDA_AJUSTE')
-                    .gte('data_movimentacao', start).lte('data_movimentacao', end);
-                if (errPerdas) throw errPerdas;
+                    .gte('created_at', start).lte('created_at', end);
+                
+                if (errPerdas) throw new Error("Movimentações: " + errPerdas.message);
 
                 processarDashboard(vendas || [], perdas || []);
                 Swal.close();
 
             } catch (err) {
-                Swal.fire('Erro', 'Não foi possível gerar os relatórios.', 'error');
+                // AGORA O ERRO MOSTRA EXATAMENTE O MOTIVO NO ALERT
+                Swal.fire('Erro no Banco', err.message, 'error');
                 console.error(err);
             }
         }
@@ -191,24 +191,26 @@
             let pgtos = { dinheiro: 0, pix: 0, cartao: 0 };
             let rankingProdutos = {};
 
-            // Analisa as Vendas
+            // Analisa as Vendas (Com blindagem para arrays vazios)
             vendas.forEach(v => {
                 faturamento += parseFloat(v.valor_total) || 0;
                 pgtos.dinheiro += parseFloat(v.pgto_dinheiro) || 0;
                 pgtos.pix += parseFloat(v.pgto_pix) || 0;
                 pgtos.cartao += parseFloat(v.pgto_cartao) || 0;
 
-                v.itens_venda.forEach(item => {
-                    const qtd = item.quantidade;
-                    const receita = qtd * item.preco_unitario;
-                    const custoUnitario = item.produtos?.preco_custo || 0; // Se não tem custo, assume 0
-                    custoTotal += qtd * custoUnitario;
+                if (v.itens_venda && v.itens_venda.length > 0) {
+                    v.itens_venda.forEach(item => {
+                        const qtd = item.quantidade || 0;
+                        const receita = qtd * (item.preco_unitario || 0);
+                        const custoUnitario = item.produtos?.preco_custo || 0; 
+                        custoTotal += qtd * custoUnitario;
 
-                    const nome = item.produtos?.nome_produto || 'Produto Excluído';
-                    if (!rankingProdutos[nome]) rankingProdutos[nome] = { qtd: 0, receita: 0 };
-                    rankingProdutos[nome].qtd += qtd;
-                    rankingProdutos[nome].receita += receita;
-                });
+                        const nome = item.produtos?.nome_produto || 'Produto Excluído';
+                        if (!rankingProdutos[nome]) rankingProdutos[nome] = { qtd: 0, receita: 0 };
+                        rankingProdutos[nome].qtd += qtd;
+                        rankingProdutos[nome].receita += receita;
+                    });
+                }
             });
 
             // Cálculos Financeiros
@@ -239,7 +241,7 @@
 
             // Curva ABC (Top 10)
             const arrayRanking = Object.entries(rankingProdutos).map(([nome, dados]) => ({ nome, ...dados }));
-            arrayRanking.sort((a, b) => b.receita - a.receita); // Ordena por quem deu mais dinheiro
+            arrayRanking.sort((a, b) => b.receita - a.receita); 
             
             const top10 = arrayRanking.slice(0, 10);
             const listaAbcHTML = top10.map((p, i) => `
@@ -253,12 +255,14 @@
             
             document.getElementById('lista_abc').innerHTML = top10.length > 0 ? listaAbcHTML : '<div style="text-align: center; color: #64748b; padding: 10px;">Sem vendas no período.</div>';
 
-            // Analisa as Perdas (Baseado no custo)
+            // Analisa as Perdas 
             let prejuizoTotal = 0;
-            perdas.forEach(p => {
-                const custo = p.produtos?.preco_custo || 0;
-                prejuizoTotal += p.quantidade * custo;
-            });
+            if (perdas && perdas.length > 0) {
+                perdas.forEach(p => {
+                    const custo = p.produtos?.preco_custo || 0;
+                    prejuizoTotal += (p.quantidade || 0) * custo;
+                });
+            }
             document.getElementById('res_perdas').innerText = formatarValor(prejuizoTotal);
         }
 
