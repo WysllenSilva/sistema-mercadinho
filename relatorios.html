@@ -166,12 +166,12 @@
                 
                 if (errVendas) throw new Error("Vendas: " + errVendas.message);
 
-                // 2. BUSCA AS PERDAS (Corrigido para created_at nativo do Supabase)
+                // 2. BUSCA AS PERDAS (Agora usando data_movimento como mostrado na imagem)
                 const { data: perdas, error: errPerdas } = await tabela_supabase
                     .from('movimentacoes_estoque')
                     .select(`quantidade, produtos(preco_custo)`)
                     .eq('tipo', 'SAIDA_AJUSTE')
-                    .gte('created_at', start).lte('created_at', end);
+                    .gte('data_movimento', start).lte('data_movimento', end);
                 
                 if (errPerdas) throw new Error("Movimentações: " + errPerdas.message);
 
@@ -179,7 +179,6 @@
                 Swal.close();
 
             } catch (err) {
-                // AGORA O ERRO MOSTRA EXATAMENTE O MOTIVO NO ALERT
                 Swal.fire('Erro no Banco', err.message, 'error');
                 console.error(err);
             }
