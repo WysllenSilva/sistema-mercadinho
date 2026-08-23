@@ -50,6 +50,9 @@
 
         .acoes-container { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
+        
+        /* Ajuste para não quebrar botões do SweetAlert no celular */
+        .swal2-actions { flex-wrap: wrap !important; gap: 5px; }
         .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
@@ -185,7 +188,6 @@
             return v.toFixed(2).replace('.', ','); 
         }
         
-        // CORREÇÃO APLICADA AQUI
         function formatarMoeda(el) {
             let v = el.value.replace(/\D/g, "");
             v = (v / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
@@ -213,32 +215,45 @@
                 if (prodLocal) {
                     boxForm.style.display = 'none';
                     
+                    // ALERTA ATUALIZADO COM 3 BOTÕES E BOTÃO DE FECHAR (X)
                     const resp = await Swal.fire({
                         title: 'Produto já cadastrado!',
-                        text: `O item "${prodLocal.nome_produto}" já existe no catálogo. Deseja ser direcionado para a Gestão de Estoque para dar entrada?`,
+                        text: `O item "${prodLocal.nome_produto}" já existe no catálogo. O que deseja fazer?`,
                         icon: 'info',
+                        showCloseButton: true,
+                        showDenyButton: true,
                         showCancelButton: true,
-                        confirmButtonText: 'Sim, ir para Estoque',
-                        cancelButtonText: 'Atualizar dados aqui'
+                        confirmButtonText: '📦 Ir para Estoque',
+                        denyButtonText: '🔄 Atualizar Aqui',
+                        cancelButtonText: '❌ Cancelar',
+                        confirmButtonColor: '#2563eb', // Azul
+                        denyButtonColor: '#64748b',   // Cinza
+                        cancelButtonColor: '#dc2626'  // Vermelho
                     });
 
                     if (resp.isConfirmed) {
-                        // Agora envia o código EAN na mochila da URL
+                        // Clicou em "Ir para Estoque"
                         window.location.href = `movimentacoes.html?ean=${ean}`;
                         return;
+                    } else if (resp.isDenied) {
+                        // Clicou em "Atualizar Aqui"
+                        boxForm.style.display = 'block';
+                        produtoExistenteId = prodLocal.id;
+                        document.getElementById('nome').value = prodLocal.nome_produto || "";
+                        await carregarCategorias(prodLocal.categoria || "");
+                        document.getElementById('preco_custo').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
+                        document.getElementById('porcentagem_lucro').value = prodLocal.porcentagem_lucro || "";
+                        document.getElementById('preco_venda').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
+                        
+                        blocoEstoqueNovo.style.display = 'none'; 
+                        boxNovo.style.display = 'none';
+                        boxEditar.style.display = 'flex';
+                    } else {
+                        // Clicou no X, clicou Fora, ou clicou em Cancelar (isDismissed)
+                        limparFormulario();
+                        document.getElementById('codigo_barras').focus();
+                        return;
                     }
-
-                    boxForm.style.display = 'block';
-                    produtoExistenteId = prodLocal.id;
-                    document.getElementById('nome').value = prodLocal.nome_produto || "";
-                    await carregarCategorias(prodLocal.categoria || "");
-                    document.getElementById('preco_custo').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
-                    document.getElementById('porcentagem_lucro').value = prodLocal.porcentagem_lucro || "";
-                    document.getElementById('preco_venda').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
-                    
-                    blocoEstoqueNovo.style.display = 'none'; 
-                    boxNovo.style.display = 'none';
-                    boxEditar.style.display = 'flex';
 
                 } else {
                     produtoExistenteId = null;
@@ -313,7 +328,8 @@
         }
 
         function limparFormulario() {
-            document.getElementById('codigo_barras').value = "";
+            const inputCodigo = document.getElementById('codigo_barras');
+            inputCodigo.value = "";
             produtoExistenteId = null;
             boxForm.style.display = 'none';
             if (readerDiv.style.display !== 'none') stopScanner();
