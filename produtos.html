@@ -19,7 +19,7 @@
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; }
-        .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
+        .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none; color: var(--text);}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
 
         main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; }
@@ -51,7 +51,7 @@
         .acoes-container { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
         
-        /* Ajuste para não quebrar botões do SweetAlert no celular */
+        /* Ajuste do SweetAlert no celular */
         .swal2-actions { flex-wrap: wrap !important; gap: 5px; }
         .swal2-popup { border-radius: 15px !important; }
     </style>
@@ -59,7 +59,7 @@
 <body>
 
     <header>
-        <button class="btn-voltar-topo" onclick="window.location.href='menu.html'" title="Voltar ao Menu">⬅️</button>
+        <a href="menu.html" class="btn-voltar-topo" title="Voltar ao Menu">⬅️</a>
         <span class="titulo-topo">Cadastro de Produtos</span>
         <div style="width: 45px;"></div>
     </header>
@@ -215,20 +215,19 @@
                 if (prodLocal) {
                     boxForm.style.display = 'none';
                     
-                    // ALERTA ATUALIZADO COM 3 BOTÕES E BOTÃO DE FECHAR (X)
+                    // ALERTA ATUALIZADO: Apenas 2 botões + Botão de Fechar (X) e Clique Fora
                     const resp = await Swal.fire({
                         title: 'Produto já cadastrado!',
                         text: `O item "${prodLocal.nome_produto}" já existe no catálogo. O que deseja fazer?`,
                         icon: 'info',
-                        showCloseButton: true,
+                        showCloseButton: true, // Adiciona o X no canto
+                        showCancelButton: false, // Remove o 3º botão
                         showDenyButton: true,
-                        showCancelButton: true,
                         confirmButtonText: '📦 Ir para Estoque',
                         denyButtonText: '🔄 Atualizar Aqui',
-                        cancelButtonText: '❌ Cancelar',
                         confirmButtonColor: '#2563eb', // Azul
                         denyButtonColor: '#64748b',   // Cinza
-                        cancelButtonColor: '#dc2626'  // Vermelho
+                        allowOutsideClick: true // Permite fechar clicando fora
                     });
 
                     if (resp.isConfirmed) {
@@ -248,14 +247,17 @@
                         blocoEstoqueNovo.style.display = 'none'; 
                         boxNovo.style.display = 'none';
                         boxEditar.style.display = 'flex';
-                    } else {
-                        // Clicou no X, clicou Fora, ou clicou em Cancelar (isDismissed)
+                    } else if (resp.isDismissed) {
+                        // ROTA DE FUGA: Fechou no X ou clicou fora
                         limparFormulario();
-                        document.getElementById('codigo_barras').focus();
-                        return;
+                        // Delay super leve para o celular processar o fechamento do modal e dar o foco
+                        setTimeout(() => {
+                            document.getElementById('codigo_barras').focus();
+                        }, 150);
                     }
 
                 } else {
+                    // PRODUTO NOVO
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
                     blocoEstoqueNovo.style.display = 'block'; 
