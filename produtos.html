@@ -23,7 +23,7 @@
         .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none; color: var(--text);}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Abas Principais (Cadastrar / Consultar) */
+        /* Abas Principais */
         .main-tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
         .m-tab { flex: 1; padding: 15px; text-align: center; font-weight: 900; color: var(--gray); border-bottom: 3px solid transparent; text-transform: uppercase; cursor: pointer; transition: 0.2s;}
         .m-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -31,11 +31,10 @@
         main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; align-items: flex-start;}
         .container { width: 100%; max-width: 500px; }
 
-        /* Visualizações Principais */
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* Estilos Gerais de Formulário */
+        /* Formulários */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
@@ -46,7 +45,7 @@
         #camera-global { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
         .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; transition: 0.2s; }
 
-        /* Módulo Cadastrar */
+        /* Cadastrar */
         .box-cadastro { background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tabs { display: flex; background: #f1f5f9; border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 2px solid #e2e8f0;}
         .tab-btn { flex: 1; padding: 12px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); cursor: pointer; transition: 0.2s; }
@@ -69,7 +68,7 @@
         .btn-update { background-color: var(--primary); }
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
 
-        /* Módulo Consultar */
+        /* Consultar */
         .search-area-cons { display: flex; gap: 8px; margin-bottom: 15px; }
         .cons-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-left: 4px solid var(--primary);}
         .cons-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;}
@@ -82,6 +81,12 @@
         .cons-stat-val { font-size: 1.1rem; font-weight: 900; color: var(--text); }
         .cons-stat-val.blue { color: var(--primary); }
         .cons-stat-val.green { color: var(--success); }
+
+        /* Ações de Admin no Card de Consulta */
+        .cons-actions { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+        .btn-cons-edit { flex: 1; background: #e0e7ff; color: var(--primary); border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-cons-del { flex: 1; background: #fee2e2; color: var(--danger); border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-cons-del.disabled { opacity: 0.5; cursor: not-allowed; }
         
         .swal2-actions { flex-wrap: wrap !important; gap: 5px; }
         .swal2-popup { border-radius: 15px !important; }
@@ -112,7 +117,7 @@
                 <div class="box-cadastro">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="codigo_barras">Código de Barras (EAN)</label>
-                        <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
+                        <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)">
                         <button type="button" class="btn-scan" id="btn-acao-ean" onclick="iniciarCamera('cad')">📸 ESCANEAR CÓDIGO</button>
                     </div>
 
@@ -206,14 +211,18 @@
         let scanTarget = 'cad'; 
         let produtoExistenteId = null; 
         let dadosConsultaGlobais = [];
-        let timeoutBusca = null; // Para o debounce (evitar loop)
-        let isSearching = false; // Trava contra múltiplas requisições simultâneas
+        let timeoutBusca = null; 
+        let isSearching = false; 
+
+        // Recupera o usuário logado para controle de acesso do Admin
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuario_mercadinho'));
+        const isAdmin = usuarioLogado && usuarioLogado.perfil === 'adm_sistema';
 
         const boxForm = document.getElementById('form-detalhes');
         const selectCategoria = document.getElementById('categoria_comp');
         const eanInput = document.getElementById('codigo_barras');
 
-        // --- CONTROLE DE ABAS ---
+        // --- CONTROLES DE INTERFACE ---
         function switchMainTab(tab) {
             document.getElementById('mtab-cad').classList.remove('active');
             document.getElementById('mtab-cons').classList.remove('active');
@@ -242,7 +251,6 @@
             document.getElementById(`tab-${aba}`).classList.add('active');
         }
 
-        // --- UTILITÁRIOS ---
         function mascaraData(input) {
             let v = input.value.replace(/\D/g, "");
             if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
@@ -259,10 +267,11 @@
             el.value = v === "0,00" ? "" : v;
         }
 
-        // --- LÓGICA DE CONSULTA ---
+        // --- LÓGICA DE CONSULTA COM AÇÕES ADM ---
         async function carregarConsulta() {
             try {
-                const { data: prods, error: errProds } = await tabela_supabase.from('produtos').select('*').order('nome_produto', { ascending: true });
+                // Traz os produtos (agora incluindo o updated_at para a data de modificação)
+                const { data: prods, error: errProds } = await tabela_supabase.from('produtos').select('*, updated_at').order('nome_produto', { ascending: true });
                 if (errProds) throw errProds;
 
                 const { data: itens, error: errItens } = await tabela_supabase.from('itens_venda').select('produto_id, quantidade');
@@ -275,14 +284,19 @@
 
                 dadosConsultaGlobais = prods.map(p => {
                     const qtdVendida = vendasMap[p.id] || 0;
-                    const d = p.created_at ? new Date(p.created_at) : new Date();
-                    const dataCad = d.toLocaleDateString('pt-BR');
-                    return { ...p, qtdVendida, dataCad };
+                    
+                    const dC = p.created_at ? new Date(p.created_at) : new Date();
+                    const dU = p.updated_at ? new Date(p.updated_at) : dC;
+                    
+                    const dataCad = dC.toLocaleDateString('pt-BR');
+                    // Data e Hora da última alteração
+                    const dataMod = dU.toLocaleDateString('pt-BR') + ' ' + dU.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                    
+                    return { ...p, qtdVendida, dataCad, dataMod };
                 });
 
                 renderizarConsulta(dadosConsultaGlobais);
             } catch (err) {
-                console.error(err);
                 document.getElementById('lista-consulta').innerHTML = `<div style="text-align: center; color: var(--danger); font-weight: bold; margin-top: 30px;">Erro ao carregar dados:<br>${err.message}</div>`;
             }
         }
@@ -294,28 +308,49 @@
                 return;
             }
 
-            container.innerHTML = dados.map(item => `
-                <div class="cons-card">
-                    <div class="cons-header">
-                        <div class="cons-nome">${item.nome_produto}</div>
-                        <div class="cons-ean">${item.codigo_barras}</div>
+            container.innerHTML = dados.map(item => {
+                let acoesAdmHtml = '';
+                
+                // Exibe os botões de ação APENAS se for Administrador
+                if (isAdmin) {
+                    const btnExcluir = item.qtdVendida > 0 
+                        ? `<button class="btn-cons-del disabled" onclick="Swal.fire('Bloqueado', 'Este produto já possui histórico de vendas e não pode ser excluído por segurança fiscal. Utilize a edição para ajustá-lo.', 'info')">🗑️ Excluir</button>`
+                        : `<button class="btn-cons-del" onclick="excluirProdutoConsulta('${item.id}', decodeURIComponent('${encodeURIComponent(item.nome_produto)}'))">🗑️ Excluir</button>`;
+                        
+                    acoesAdmHtml = `
+                        <div class="cons-actions">
+                            <button class="btn-cons-edit" onclick="editarProdutoConsulta('${item.codigo_barras}')">✏️ Editar</button>
+                            ${btnExcluir}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="cons-card">
+                        <div class="cons-header">
+                            <div class="cons-nome">${item.nome_produto}</div>
+                            <div class="cons-ean">${item.codigo_barras}</div>
+                        </div>
+                        <div class="cons-stats" style="margin-top: 5px; border-top: none; padding-top: 0; margin-bottom: 12px;">
+                            <div class="cons-stat-item">
+                                <span class="cons-stat-label">Modificado em</span>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: var(--gray);">${item.dataMod}</span>
+                            </div>
+                        </div>
+                        <div class="cons-stats">
+                            <div class="cons-stat-item" style="text-align: left;">
+                                <span class="cons-stat-label">Vendas</span>
+                                <span class="cons-stat-val blue">${item.qtdVendida} un</span>
+                            </div>
+                            <div class="cons-stat-item" style="text-align: right;">
+                                <span class="cons-stat-label">Valor (R$)</span>
+                                <span class="cons-stat-val green">${formataInputMoeda(item.preco_venda || 0)}</span>
+                            </div>
+                        </div>
+                        ${acoesAdmHtml}
                     </div>
-                    <div class="cons-stats">
-                        <div class="cons-stat-item">
-                            <span class="cons-stat-label">Cadastrado em</span>
-                            <span style="font-size: 0.9rem; font-weight: 700; color: var(--text);">${item.dataCad}</span>
-                        </div>
-                        <div class="cons-stat-item" style="text-align: center;">
-                            <span class="cons-stat-label">Vendas</span>
-                            <span class="cons-stat-val blue">${item.qtdVendida} un</span>
-                        </div>
-                        <div class="cons-stat-item" style="text-align: right;">
-                            <span class="cons-stat-label">Valor (R$)</span>
-                            <span class="cons-stat-val green">${formataInputMoeda(item.preco_venda || 0)}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function filtrarConsulta(termoDigitado) {
@@ -331,7 +366,38 @@
             renderizarConsulta(filtrados);
         }
 
-        // --- LÓGICA DE CADASTRO BLINDADA CONTRA LOOPS E ERROS ---
+        // --- AÇÕES DO ADMIN NA CONSULTA ---
+        window.editarProdutoConsulta = function(ean) {
+            document.getElementById('codigo_barras').value = ean;
+            buscarProdutoAPI(ean, true); // O 'true' pula o alert e joga direto pra tela de edição
+        }
+
+        window.excluirProdutoConsulta = async function(id, nome) {
+            const { value: pinDigitado } = await Swal.fire({
+                title: 'Atenção: Exclusão Permanente',
+                text: `Digite seu PIN de Administrador para EXCLUIR o produto "${nome}":`,
+                input: 'password',
+                inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                showCancelButton: true,
+                confirmButtonText: '🗑️ Confirmar Exclusão',
+                confirmButtonColor: '#dc2626'
+            });
+
+            if (!pinDigitado) return;
+
+            Swal.fire({ title: 'Verificando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const { data: adminUser } = await tabela_supabase.from('usuarios').select('id').eq('pin_senha', pinDigitado).eq('perfil', 'adm_sistema').maybeSingle();
+            if (!adminUser) return Swal.fire('Acesso Negado', 'PIN inválido ou sem privilégios.', 'error');
+
+            const { error } = await tabela_supabase.from('produtos').delete().eq('id', id);
+            if (error) return Swal.fire('Erro ao Excluir', error.message, 'error');
+
+            Swal.fire({ title: 'Produto Excluído!', icon: 'success', timer: 1500, showConfirmButton: false});
+            carregarConsulta(); // Recarrega a lista
+        };
+
+        // --- LÓGICA DE CADASTRO ---
         async function carregarCategorias(categoriaSelecionada = "") {
             const { data } = await tabela_supabase.from('categorias').select('nome').order('nome', { ascending: true });
             if (data) {
@@ -349,17 +415,11 @@
         }
 
         function checarDigitacao(ean) {
-            // Se o campo EAN estiver desabilitado (em modo Atualização), ignora as teclas para não fazer loop
             if (eanInput.disabled) return; 
-            
             produtoExistenteId = null; 
-            clearTimeout(timeoutBusca); // Zera o temporizador
-            
+            clearTimeout(timeoutBusca); 
             if (ean.length >= 8) {
-                // Aguarda 600ms antes de buscar (Debounce)
-                timeoutBusca = setTimeout(() => {
-                    buscarProdutoAPI(ean);
-                }, 600);
+                timeoutBusca = setTimeout(() => { buscarProdutoAPI(ean); }, 600);
             } else {
                 boxForm.style.display = 'none'; 
             }
@@ -377,10 +437,41 @@
             if (custo > 0 && venda > custo) document.getElementById('porcentagem_lucro_comp').value = Math.round(((venda - custo) / custo) * 100);
         }
 
-        async function buscarProdutoAPI(ean) {
+        // Função utilitária para preparar a tela de edição
+        async function prepararTelaEdicao(prodLocal) {
+            boxForm.style.display = 'block';
+            mudarAbaSub('comp');
+            produtoExistenteId = prodLocal.id;
+            
+            eanInput.value = prodLocal.codigo_barras;
+            eanInput.disabled = true; 
+            
+            const btnAcao = document.getElementById('btn-acao-ean');
+            btnAcao.innerHTML = "🧹 LIMPAR / CANCELAR EDICAO";
+            btnAcao.style.backgroundColor = "var(--danger)";
+            btnAcao.onclick = limparFormularioCadastro;
+            
+            document.getElementById('nome_comp').value = prodLocal.nome_produto || "";
+            await carregarCategorias(prodLocal.categoria || "");
+            document.getElementById('preco_custo_comp').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
+            document.getElementById('porcentagem_lucro_comp').value = prodLocal.porcentagem_lucro || "";
+            document.getElementById('preco_venda_comp').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
+            
+            document.getElementById('nome_pre').value = prodLocal.nome_produto || "";
+            document.getElementById('preco_venda_pre').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
+            
+            document.getElementById('ini_qtd').value = ""; document.getElementById('ini_lote').value = ""; document.getElementById('ini_vencimento').value = "";
+            document.getElementById('bloco-estoque-novo').style.display = 'block'; 
+            document.getElementById('btn-salvar-comp').style.display = 'none';
+            document.getElementById('btn-atualizar-comp').style.display = 'flex';
+
+            switchMainTab('cad'); // Joga o usuário para a tela de cadastro se ele veio da consulta
+        }
+
+        async function buscarProdutoAPI(ean, autoEdit = false) {
             if (!ean || ean.length < 8) return;
-            if (eanInput.disabled) return; // Segurança extra contra chamadas acidentais
-            if (isSearching) return; // Bloqueia duas buscas ao mesmo tempo
+            if (eanInput.disabled && !autoEdit) return; 
+            if (isSearching) return; 
             
             isSearching = true;
 
@@ -389,48 +480,28 @@
 
                 if (prodLocal) {
                     boxForm.style.display = 'none';
-                    const resp = await Swal.fire({
-                        title: 'Produto Localizado!', text: `O item "${prodLocal.nome_produto}" já existe.`, icon: 'info',
-                        showCloseButton: true, showCancelButton: false, showDenyButton: true,
-                        confirmButtonText: '📦 Ir para Estoque', denyButtonText: '📝 Completar / Atualizar',
-                        confirmButtonColor: '#2563eb', denyButtonColor: '#64748b', allowOutsideClick: true
-                    });
 
-                    if (resp.isConfirmed) {
-                        window.location.href = `movimentacoes.html?ean=${ean}`;
-                    } else if (resp.isDenied) {
-                        // FORÇA A ATUALIZAÇÃO SEGURA
-                        boxForm.style.display = 'block';
-                        mudarAbaSub('comp');
-                        produtoExistenteId = prodLocal.id;
-                        
-                        // Garante que o EAN apareça e o campo fique TRAVADO
-                        eanInput.value = prodLocal.codigo_barras;
-                        eanInput.disabled = true; 
-                        
-                        const btnAcao = document.getElementById('btn-acao-ean');
-                        btnAcao.innerHTML = "🧹 LIMPAR / NOVO CADASTRO";
-                        btnAcao.style.backgroundColor = "var(--danger)";
-                        btnAcao.onclick = limparFormularioCadastro;
-                        
-                        document.getElementById('nome_comp').value = prodLocal.nome_produto || "";
-                        await carregarCategorias(prodLocal.categoria || "");
-                        document.getElementById('preco_custo_comp').value = prodLocal.preco_custo ? formataInputMoeda(prodLocal.preco_custo) : "";
-                        document.getElementById('porcentagem_lucro_comp').value = prodLocal.porcentagem_lucro || "";
-                        document.getElementById('preco_venda_comp').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
-                        
-                        document.getElementById('nome_pre').value = prodLocal.nome_produto || "";
-                        document.getElementById('preco_venda_pre').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
-                        
-                        document.getElementById('ini_qtd').value = ""; document.getElementById('ini_lote').value = ""; document.getElementById('ini_vencimento').value = "";
-                        document.getElementById('bloco-estoque-novo').style.display = 'block'; 
-                        document.getElementById('btn-salvar-comp').style.display = 'none';
-                        document.getElementById('btn-atualizar-comp').style.display = 'flex';
-                    } else if (resp.isDismissed) {
-                        limparFormularioCadastro();
+                    if (autoEdit) {
+                        // Veio do botão Editar da Consulta, pula as perguntas
+                        await prepararTelaEdicao(prodLocal);
+                    } else {
+                        const resp = await Swal.fire({
+                            title: 'Produto Localizado!', text: `O item "${prodLocal.nome_produto}" já existe.`, icon: 'info',
+                            showCloseButton: true, showCancelButton: false, showDenyButton: true,
+                            confirmButtonText: '📦 Ir para Estoque', denyButtonText: '📝 Completar / Atualizar',
+                            confirmButtonColor: '#2563eb', denyButtonColor: '#64748b', allowOutsideClick: true
+                        });
+
+                        if (resp.isConfirmed) {
+                            window.location.href = `movimentacoes.html?ean=${ean}`;
+                        } else if (resp.isDenied) {
+                            await prepararTelaEdicao(prodLocal);
+                        } else if (resp.isDismissed) {
+                            limparFormularioCadastro();
+                        }
                     }
                 } else {
-                    eanInput.value = ean; // Garante a visualização
+                    eanInput.value = ean; 
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
                     mudarAbaSub('pre');
@@ -452,7 +523,7 @@
             } catch (err) { 
                 console.log(err); 
             } finally {
-                isSearching = false; // Destrava para a próxima busca
+                isSearching = false; 
             }
         }
 
@@ -476,6 +547,9 @@
 
             const payload = { codigo_barras: codigo, nome_produto: nome };
             if (venda > 0) payload.preco_venda = venda; 
+            
+            // Registra hora da modificação se for edição
+            if (produtoExistenteId) payload.updated_at = new Date().toISOString();
 
             try {
                 if (produtoExistenteId) await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
@@ -499,6 +573,8 @@
                 preco_custo: parseValor(document.getElementById('preco_custo_comp').value), 
                 porcentagem_lucro: parseFloat(document.getElementById('porcentagem_lucro_comp').value) || 0, preco_venda: venda 
             };
+
+            if (produtoExistenteId) payload.updated_at = new Date().toISOString();
 
             try {
                 let idEstoque = produtoExistenteId;
@@ -527,7 +603,7 @@
             const btnAcao = document.getElementById('btn-acao-ean');
             
             eanInput.value = "";
-            eanInput.disabled = false; // Destrava o input
+            eanInput.disabled = false; 
             btnAcao.innerHTML = "📸 ESCANEAR CÓDIGO";
             btnAcao.style.backgroundColor = "#475569";
             btnAcao.onclick = () => iniciarCamera('cad');
