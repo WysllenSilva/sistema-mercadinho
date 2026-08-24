@@ -18,12 +18,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
-        /* Cabeçalho */
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-shrink: 0;}
         .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none; color: var(--text);}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Abas Principais (Cadastrar / Consultar) */
         .main-tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
         .m-tab { flex: 1; padding: 15px; text-align: center; font-weight: 900; color: var(--gray); border-bottom: 3px solid transparent; text-transform: uppercase; cursor: pointer; transition: 0.2s;}
         .m-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -31,21 +29,18 @@
         main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; align-items: flex-start;}
         .container { width: 100%; max-width: 500px; }
 
-        /* Visualizações Principais */
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* Estilos Gerais de Formulário */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
         input:focus, select:focus { border-color: var(--primary); }
+        input:disabled { background-color: #e2e8f0; cursor: not-allowed; }
         
-        /* Câmera Global */
         #camera-global { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
-        .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
+        .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; transition: 0.2s; }
 
-        /* Módulo Cadastrar */
         .box-cadastro { background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tabs { display: flex; background: #f1f5f9; border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 2px solid #e2e8f0;}
         .tab-btn { flex: 1; padding: 12px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); cursor: pointer; transition: 0.2s; }
@@ -68,7 +63,6 @@
         .btn-update { background-color: var(--primary); }
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
 
-        /* Módulo Consultar */
         .search-area-cons { display: flex; gap: 8px; margin-bottom: 15px; }
         .cons-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-left: 4px solid var(--primary);}
         .cons-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;}
@@ -102,7 +96,6 @@
 
     <main>
         <div class="container">
-            <!-- CÂMERA GLOBAL (Usada pelas duas abas) -->
             <div id="camera-global"></div>
             <button type="button" class="btn-scan" id="btn-toggle-scan" style="display: none;" onclick="toggleCamera()">🛑 PARAR CÂMERA</button>
 
@@ -112,7 +105,7 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="codigo_barras">Código de Barras (EAN)</label>
                         <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
-                        <button type="button" class="btn-scan" onclick="iniciarCamera('cad')">📸 ESCANEAR CÓDIGO</button>
+                        <button type="button" class="btn-scan" id="btn-acao-ean" onclick="iniciarCamera('cad')">📸 ESCANEAR CÓDIGO</button>
                     </div>
 
                     <div id="form-detalhes">
@@ -200,16 +193,14 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // VARIÁVEIS GLOBAIS
         let html5QrCode;
-        let scanTarget = 'cad'; // Controla para onde o bipe da câmera vai ('cad' ou 'cons')
+        let scanTarget = 'cad'; 
         let produtoExistenteId = null; 
         let dadosConsultaGlobais = [];
 
         const boxForm = document.getElementById('form-detalhes');
         const selectCategoria = document.getElementById('categoria_comp');
 
-        // --- CONTROLE DE ABAS PRINCIPAIS ---
         function switchMainTab(tab) {
             document.getElementById('mtab-cad').classList.remove('active');
             document.getElementById('mtab-cons').classList.remove('active');
@@ -219,7 +210,6 @@
             document.getElementById(`mtab-${tab}`).classList.add('active');
             document.getElementById(`view-${tab}`).classList.add('active');
 
-            // Se mudar de aba, desliga a câmera por segurança
             if(html5QrCode && html5QrCode.isScanning) toggleCamera();
 
             if (tab === 'cons') {
@@ -229,7 +219,6 @@
             }
         }
 
-        // --- CONTROLE DE ABAS INTERNAS (PRÉ/COMPLETO) ---
         function mudarAbaSub(aba) {
             document.getElementById('btn-tab-pre').classList.remove('active');
             document.getElementById('btn-tab-comp').classList.remove('active');
@@ -240,7 +229,6 @@
             document.getElementById(`tab-${aba}`).classList.add('active');
         }
 
-        // --- UTILITÁRIOS ---
         function mascaraData(input) {
             let v = input.value.replace(/\D/g, "");
             if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
@@ -257,32 +245,42 @@
             el.value = v === "0,00" ? "" : v;
         }
 
-        // --- LÓGICA DE CONSULTA (NOVO) ---
+        // --- LÓGICA DE CONSULTA BLINDADA ---
         async function carregarConsulta() {
             try {
-                // Traz os produtos e puxa as quantidades da tabela itens_venda para somar o total vendido
-                const { data, error } = await tabela_supabase
+                // 1. Busca os Produtos
+                const { data: prods, error: errProds } = await tabela_supabase
                     .from('produtos')
-                    .select('id, codigo_barras, nome_produto, preco_venda, created_at, itens_venda(quantidade)')
+                    .select('*')
                     .order('nome_produto', { ascending: true });
 
-                if (error) throw error;
+                if (errProds) throw errProds;
 
-                dadosConsultaGlobais = data.map(p => {
-                    // Soma a quantidade de vezes que o produto foi vendido
-                    const qtdVendida = p.itens_venda ? p.itens_venda.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) : 0;
-                    
-                    // Formata Data de Cadastro
-                    const d = new Date(p.created_at);
+                // 2. Busca as vendas e soma no JavaScript para evitar erros do banco
+                const { data: itens, error: errItens } = await tabela_supabase
+                    .from('itens_venda')
+                    .select('produto_id, quantidade');
+
+                if (errItens) throw errItens;
+
+                const vendasMap = {};
+                if (itens) {
+                    itens.forEach(i => {
+                        vendasMap[i.produto_id] = (vendasMap[i.produto_id] || 0) + i.quantidade;
+                    });
+                }
+
+                dadosConsultaGlobais = prods.map(p => {
+                    const qtdVendida = vendasMap[p.id] || 0;
+                    const d = p.created_at ? new Date(p.created_at) : new Date();
                     const dataCad = d.toLocaleDateString('pt-BR');
-
                     return { ...p, qtdVendida, dataCad };
                 });
 
                 renderizarConsulta(dadosConsultaGlobais);
             } catch (err) {
                 console.error(err);
-                document.getElementById('lista-consulta').innerHTML = '<div style="text-align: center; color: var(--danger);">Erro ao carregar dados.</div>';
+                document.getElementById('lista-consulta').innerHTML = `<div style="text-align: center; color: var(--danger); font-weight: bold; margin-top: 30px;">Erro ao carregar dados:<br>${err.message}</div>`;
             }
         }
 
@@ -324,8 +322,8 @@
                 return;
             }
             const filtrados = dadosConsultaGlobais.filter(p => 
-                p.nome_produto.toLowerCase().includes(termo) || 
-                p.codigo_barras.includes(termo)
+                (p.nome_produto && p.nome_produto.toLowerCase().includes(termo)) || 
+                (p.codigo_barras && p.codigo_barras.includes(termo))
             );
             renderizarConsulta(filtrados);
         }
@@ -382,9 +380,18 @@
                     if (resp.isConfirmed) {
                         window.location.href = `movimentacoes.html?ean=${ean}`;
                     } else if (resp.isDenied) {
+                        // PREPARAÇÃO SEGURA DA TELA DE ATUALIZAÇÃO
                         boxForm.style.display = 'block';
                         mudarAbaSub('comp');
                         produtoExistenteId = prodLocal.id;
+                        
+                        // Trava o campo EAN e muda o botão para LIMPAR
+                        const eanInput = document.getElementById('codigo_barras');
+                        const btnAcao = document.getElementById('btn-acao-ean');
+                        eanInput.disabled = true;
+                        btnAcao.innerHTML = "🧹 LIMPAR / NOVO CADASTRO";
+                        btnAcao.style.backgroundColor = "var(--danger)";
+                        btnAcao.onclick = limparFormularioCadastro;
                         
                         document.getElementById('nome_comp').value = prodLocal.nome_produto || "";
                         await carregarCategorias(prodLocal.categoria || "");
@@ -492,13 +499,21 @@
         }
 
         function limparFormularioCadastro() {
-            document.getElementById('codigo_barras').value = "";
+            const eanInput = document.getElementById('codigo_barras');
+            const btnAcao = document.getElementById('btn-acao-ean');
+            
+            eanInput.value = "";
+            eanInput.disabled = false;
+            btnAcao.innerHTML = "📸 ESCANEAR CÓDIGO";
+            btnAcao.style.backgroundColor = "#475569";
+            btnAcao.onclick = () => iniciarCamera('cad');
+            
             produtoExistenteId = null;
             boxForm.style.display = 'none';
-            setTimeout(() => document.getElementById('codigo_barras').focus(), 150);
+            setTimeout(() => eanInput.focus(), 150);
         }
 
-        // --- MOTOR DA CÂMERA (GLOBAL) ---
+        // --- MOTOR DA CÂMERA GLOBAL ---
         function validarEAN(ean) {
             ean = ean.trim();
             if (!/^\d+$/.test(ean)) return { valido: false, msg: "Apenas números." };
@@ -508,11 +523,11 @@
         }
 
         function iniciarCamera(target) {
-            scanTarget = target; // Define se a leitura vai para Cadastro ou Consulta
+            scanTarget = target; 
             const readerDiv = document.getElementById('camera-global');
             const btnScan = document.getElementById('btn-toggle-scan');
             
-            if (readerDiv.style.display === 'block') return; // Já está rodando
+            if (readerDiv.style.display === 'block') return; 
 
             html5QrCode = new Html5Qrcode("camera-global");
             readerDiv.style.display = 'block';
@@ -522,7 +537,7 @@
                 { facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } },
                 (decodedText) => {
                     if (navigator.vibrate) navigator.vibrate(100);
-                    toggleCamera(); // Desliga a câmera após a leitura
+                    toggleCamera(); 
 
                     const validador = validarEAN(decodedText);
                     if (!validador.valido) return Swal.fire('Leitura Inválida', validador.msg, 'error');
