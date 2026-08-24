@@ -18,43 +18,36 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         
-        /* Estrutura de "Sanduíche" travada na tela */
         html, body { 
-            background-color: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%; 
-            height: 100dvh; /* Altura exata do celular */
-            overflow: hidden; /* Trava rolagem geral */
+            background-color: var(--bg); color: var(--text); display: flex; 
+            flex-direction: column; height: 100%; height: 100dvh; overflow: hidden; 
         }
 
-        /* Topo Fixo */
-        .header-area {
-            padding: 25px 15px 10px 15px;
-            flex-shrink: 0;
-            background-color: var(--bg);
-            z-index: 10;
-        }
+        .header-area { padding: 25px 15px 10px 15px; flex-shrink: 0; background-color: var(--bg); z-index: 10; }
         .app-title { font-size: 1.8rem; font-weight: 800; text-align: center; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
         .user-welcome { font-size: 0.95rem; color: #64748b; font-weight: 600; text-align: center; }
 
-        /* Miolo Rolável (onde ficam os botões) */
         .menu-container { 
-            width: 100%; 
-            max-width: 500px; 
-            margin: 0 auto;
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            overflow-y: auto; /* Rolagem apenas aqui dentro */
-            flex: 1; 
-            padding: 15px;
+            width: 100%; max-width: 500px; margin: 0 auto; display: flex; 
+            flex-direction: column; gap: 15px; overflow-y: auto; flex: 1; padding: 15px;
         }
+
+        /* --- PAINEL DE ALERTAS INTELIGENTE --- */
+        .alert-box {
+            background: #fffbeb; border-left: 5px solid #f59e0b; padding: 12px 15px;
+            border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer;
+            display: none; /* Escondido por padrão */ flex-direction: column; gap: 8px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .alert-box.danger-mode { background: #fef2f2; border-left-color: var(--danger); }
+        .alert-title { font-weight: 800; color: #854d0e; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between;}
+        .alert-title.danger-mode { color: #991b1b; }
+        .alert-item { font-size: 0.85rem; color: #9a3412; font-weight: 700; display: flex; align-items: center; gap: 6px;}
+        .alert-item.danger { color: var(--danger); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
-        /* Botões com tamanho original restaurado */
         .btn-menu { 
             border: none; border-radius: 12px; padding: 22px 10px; font-size: 1.1rem; font-weight: 800; 
             cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; 
@@ -72,17 +65,10 @@
 
         .divider { height: 2px; background-color: #cbd5e1; margin: 5px 0; border-radius: 2px; }
 
-        /* Rodapé Fixo (Botão Sair) */
         .footer-action { 
-            width: 100%; 
-            background: var(--white);
-            padding: 15px; 
-            padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* Margem p/ barra do iPhone/Android */
-            flex-shrink: 0; 
-            display: flex; 
-            justify-content: center;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05); 
-            z-index: 10;
+            width: 100%; background: var(--white); padding: 15px; 
+            padding-bottom: calc(15px + env(safe-area-inset-bottom)); flex-shrink: 0; 
+            display: flex; justify-content: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 10;
         }
         .btn-sair { 
             background-color: var(--danger); color: white; border: none; border-radius: 10px; 
@@ -94,14 +80,22 @@
 </head>
 <body>
 
-    <!-- CABEÇALHO FIXO -->
     <div class="header-area">
         <h1 class="app-title">MERCADINHO</h1>
         <div id="welcome-msg" class="user-welcome">Carregando usuário...</div>
     </div>
 
-    <!-- MIOLO COM ROLAGEM -->
     <div class="menu-container">
+        
+        <!-- BLOCO DE NOTIFICAÇÕES (Injetado via JS) -->
+        <div id="painel-alertas" class="alert-box" onclick="window.location.href='prateleira.html'">
+            <div id="alert-title" class="alert-title">
+                <span>🔔 Atenção Requerida</span>
+                <span style="font-size: 0.8rem; text-decoration: underline;">Ver Detalhes</span>
+            </div>
+            <div id="lista-alertas" style="display: flex; flex-direction: column; gap: 5px;"></div>
+        </div>
+
         <div class="grid-2">
             <a href="vendas.html" class="btn-menu btn-vender"><i>🛒</i> VENDER</a>
             <a href="historico.html" class="btn-menu btn-historico"><i>📄</i> HISTÓRICO</a>
@@ -119,12 +113,15 @@
         <div id="slot-admin" class="grid-2" style="margin-top: 5px;"></div>
     </div>
 
-    <!-- RODAPÉ FIXO -->
     <div class="footer-action">
         <button class="btn-sair" onclick="fazerLogout()">❌ SAIR DO SISTEMA</button>
     </div>
 
     <script>
+        const SUPABASE_URL = "https://lwakjpkjieswatbmukdy.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
+        const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const usuarioLogado = JSON.parse(localStorage.getItem('usuario_mercadinho'));
 
         if (!usuarioLogado) {
@@ -140,11 +137,97 @@
                     <a href="configuracoes.html" class="btn-menu btn-configs"><i>⚙️</i> AJUSTES</a>
                 `;
             }
+            
+            // Chama a verificação de alertas assim que a tela abre
+            verificarAlertasEstoque();
         }
 
         function fazerLogout() {
             localStorage.removeItem('usuario_mercadinho');
             window.location.href = 'index.html';
+        }
+
+        async function verificarAlertasEstoque() {
+            try {
+                // Traz apenas o necessário para economizar dados de internet
+                const { data: produtos } = await tabela_supabase
+                    .from('produtos')
+                    .select('estoque_minimo, prateleira_fisica(quantidade, data_vencimento)');
+
+                if (!produtos) return;
+
+                let qtdVencidos = 0;
+                let qtdVencendo = 0;
+                let qtdEstoqueBaixo = 0;
+                let qtdEstoqueNegativo = 0;
+
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+
+                produtos.forEach(prod => {
+                    let totalProduto = 0;
+                    const min = prod.estoque_minimo || 5;
+
+                    if (prod.prateleira_fisica) {
+                        prod.prateleira_fisica.forEach(lote => {
+                            totalProduto += lote.quantidade;
+                            
+                            // Verifica validade (Apenas para lotes que tem estoque)
+                            if (lote.quantidade > 0 && lote.data_vencimento && lote.data_vencimento !== '2099-12-31') {
+                                const partes = lote.data_vencimento.split('-');
+                                const dataVenc = new Date(partes[0], partes[1] - 1, partes[2]);
+                                const diasFaltando = Math.ceil((dataVenc.getTime() - hoje.getTime()) / (1000 * 3600 * 24));
+
+                                if (diasFaltando < 0) qtdVencidos++;
+                                else if (diasFaltando <= 30) qtdVencendo++;
+                            }
+                        });
+                    }
+
+                    // Verifica Status do Estoque Total do Produto
+                    if (totalProduto < 0) {
+                        qtdEstoqueNegativo++;
+                    } else if (totalProduto <= min) {
+                        qtdEstoqueBaixo++;
+                    }
+                });
+
+                // Constrói o HTML das notificações se houver algo
+                let htmlAlertas = "";
+                let perigoMaximo = false;
+
+                if (qtdVencidos > 0) {
+                    htmlAlertas += `<div class="alert-item danger">🚨 ${qtdVencidos} Lote(s) Vencido(s) na prateleira!</div>`;
+                    perigoMaximo = true;
+                }
+                if (qtdEstoqueNegativo > 0) {
+                    htmlAlertas += `<div class="alert-item danger">📉 ${qtdEstoqueNegativo} Produto(s) com Estoque Negativo</div>`;
+                    perigoMaximo = true;
+                }
+                if (qtdVencendo > 0) {
+                    htmlAlertas += `<div class="alert-item">⚠️ ${qtdVencendo} Lote(s) vencendo em até 30 dias</div>`;
+                }
+                if (qtdEstoqueBaixo > 0) {
+                    htmlAlertas += `<div class="alert-item">📦 ${qtdEstoqueBaixo} Produto(s) com Estoque Baixo ou Zerado</div>`;
+                }
+
+                // Se gerou alguma mensagem, acende a luz no menu
+                if (htmlAlertas !== "") {
+                    const painel = document.getElementById('painel-alertas');
+                    const titulo = document.getElementById('alert-title');
+                    
+                    if (perigoMaximo) {
+                        painel.classList.add('danger-mode');
+                        titulo.classList.add('danger-mode');
+                    }
+                    
+                    document.getElementById('lista-alertas').innerHTML = htmlAlertas;
+                    painel.style.display = 'flex';
+                }
+
+            } catch (err) {
+                console.error("Erro ao processar alertas:", err);
+            }
         }
     </script>
 </body>
