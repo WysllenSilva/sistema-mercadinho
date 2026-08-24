@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cadastro de Produtos - Mercadinho</title>
+    <title>Gestão de Produtos - Mercadinho</title>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -18,27 +18,41 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
+        /* Cabeçalho */
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-shrink: 0;}
         .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none; color: var(--text);}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 500px; background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); height: fit-content; }
+        /* Abas Principais (Cadastrar / Consultar) */
+        .main-tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
+        .m-tab { flex: 1; padding: 15px; text-align: center; font-weight: 900; color: var(--gray); border-bottom: 3px solid transparent; text-transform: uppercase; cursor: pointer; transition: 0.2s;}
+        .m-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; align-items: flex-start;}
+        .container { width: 100%; max-width: 500px; }
 
+        /* Visualizações Principais */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* Estilos Gerais de Formulário */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
         input:focus, select:focus { border-color: var(--primary); }
         
-        #reader { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); }
+        /* Câmera Global */
+        #camera-global { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
         .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
 
+        /* Módulo Cadastrar */
+        .box-cadastro { background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tabs { display: flex; background: #f1f5f9; border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 2px solid #e2e8f0;}
         .tab-btn { flex: 1; padding: 12px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); cursor: pointer; transition: 0.2s; }
         .tab-btn.active { background: var(--primary); color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
+        
         .grid-cat { display: flex; gap: 8px; }
         .btn-add-cat { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 15px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -52,102 +66,132 @@
         .btn-save-fast { background-color: var(--warning); color: #0f172a; }
         .btn-save-full { background-color: var(--success); }
         .btn-update { background-color: var(--primary); }
-
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
+
+        /* Módulo Consultar */
+        .search-area-cons { display: flex; gap: 8px; margin-bottom: 15px; }
+        .cons-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-left: 4px solid var(--primary);}
+        .cons-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;}
+        .cons-nome { font-weight: 800; font-size: 1.05rem; color: var(--text); line-height: 1.2; flex: 1; margin-right: 10px;}
+        .cons-ean { font-size: 0.75rem; color: var(--gray); font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: bold;}
+        
+        .cons-stats { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; }
+        .cons-stat-item { display: flex; flex-direction: column; }
+        .cons-stat-label { font-size: 0.7rem; color: var(--gray); font-weight: 800; text-transform: uppercase; margin-bottom: 2px;}
+        .cons-stat-val { font-size: 1.1rem; font-weight: 900; color: var(--text); }
+        .cons-stat-val.blue { color: var(--primary); }
+        .cons-stat-val.green { color: var(--success); }
         
         .swal2-actions { flex-wrap: wrap !important; gap: 5px; }
         .swal2-popup { border-radius: 15px !important; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body>
 
     <header>
         <a href="menu.html" class="btn-voltar-topo" title="Voltar ao Menu">⬅️</a>
-        <span class="titulo-topo">Cadastro de Produtos</span>
+        <span class="titulo-topo">Produtos</span>
         <div style="width: 45px;"></div>
     </header>
 
+    <div class="main-tabs">
+        <div class="m-tab active" id="mtab-cad" onclick="switchMainTab('cad')">➕ Cadastrar</div>
+        <div class="m-tab" id="mtab-cons" onclick="switchMainTab('cons')">🔍 Consultar</div>
+    </div>
+
     <main>
         <div class="container">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="codigo_barras">Código de Barras (EAN)</label>
-                <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
+            <!-- CÂMERA GLOBAL (Usada pelas duas abas) -->
+            <div id="camera-global"></div>
+            <button type="button" class="btn-scan" id="btn-toggle-scan" style="display: none;" onclick="toggleCamera()">🛑 PARAR CÂMERA</button>
+
+            <!-- ================= VIEW: CADASTRAR ================= -->
+            <div id="view-cad" class="view-section active">
+                <div class="box-cadastro">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="codigo_barras">Código de Barras (EAN)</label>
+                        <input type="text" id="codigo_barras" placeholder="Bipe ou digite o código" oninput="checarDigitacao(this.value)" onchange="buscarProdutoAPI(this.value)">
+                        <button type="button" class="btn-scan" onclick="iniciarCamera('cad')">📸 ESCANEAR CÓDIGO</button>
+                    </div>
+
+                    <div id="form-detalhes">
+                        <div class="tabs">
+                            <div class="tab-btn active" id="btn-tab-pre" onclick="mudarAbaSub('pre')">⚡ PRÉ-CADASTRO</div>
+                            <div class="tab-btn" id="btn-tab-comp" onclick="mudarAbaSub('comp')">📝 COMPLETO</div>
+                        </div>
+
+                        <div id="tab-pre" class="tab-content active">
+                            <div class="form-group">
+                                <label>Nome do Produto</label>
+                                <input type="text" id="nome_pre" placeholder="Ex: Farinha de Mandioca">
+                            </div>
+                            <div class="form-group">
+                                <label>Preço de Venda (R$) - Opcional</label>
+                                <input type="text" id="preco_venda_pre" placeholder="0,00" onkeyup="formatarMoeda(this)">
+                            </div>
+                            <button class="btn-acao btn-save-fast" onclick="salvarPreCadastro()">⚡ SALVAR RÁPIDO</button>
+                        </div>
+
+                        <div id="tab-comp" class="tab-content">
+                            <div class="form-group">
+                                <label>Nome do Produto</label>
+                                <input type="text" id="nome_comp" placeholder="Ex: Farinha de Mandioca">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Categoria</label>
+                                <div class="grid-cat">
+                                    <select id="categoria_comp" style="flex: 1;"><option value="">Carregando...</option></select>
+                                    <button type="button" class="btn-add-cat" onclick="adicionarNovaCategoria()">+</button>
+                                </div>
+                            </div>
+
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label>Custo (R$)</label>
+                                    <input type="text" id="preco_custo_comp" placeholder="0,00" onkeyup="formatarMoeda(this); calcularPrecoVenda();">
+                                </div>
+                                <div class="form-group">
+                                    <label>Margem (%)</label>
+                                    <input type="number" id="porcentagem_lucro_comp" placeholder="0" onkeyup="calcularPrecoVenda()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Venda (R$)</label>
+                                    <input type="text" id="preco_venda_comp" placeholder="0,00" onkeyup="formatarMoeda(this); calcularMargem();">
+                                </div>
+                            </div>
+
+                            <div class="bloco-estoque-inicial" id="bloco-estoque-novo">
+                                <h4>📦 Adicionar Estoque (Opcional)</h4>
+                                <div class="grid-2">
+                                    <div class="form-group" style="margin-bottom: 8px;"><label>Quantidade</label><input type="number" id="ini_qtd" min="1"></div>
+                                    <div class="form-group" style="margin-bottom: 8px;"><label>Lote</label><input type="text" id="ini_lote"></div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Vencimento</label><input type="text" id="ini_vencimento" placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this)">
+                                </div>
+                            </div>
+
+                            <button class="btn-acao btn-save-full" id="btn-salvar-comp" onclick="salvarCadastroCompleto()">💾 SALVAR E ESTOCAR</button>
+                            <button class="btn-acao btn-update" id="btn-atualizar-comp" style="display: none;" onclick="salvarCadastroCompleto()">🔄 ATUALIZAR PRODUTO</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: CONSULTAR ================= -->
+            <div id="view-cons" class="view-section">
+                <div class="search-area-cons">
+                    <input type="text" id="input_consulta" placeholder="Nome ou EAN..." onkeyup="filtrarConsulta(this.value)">
+                    <button class="btn-scan" style="width: 60px; margin-top: 0; padding: 0; font-size: 1.4rem;" onclick="iniciarCamera('cons')">📸</button>
+                </div>
                 
-                <div id="reader"></div>
-                <button type="button" class="btn-scan" id="btn-toggle-scan">📸 ESCANEAR CÓDIGO</button>
-            </div>
-
-            <div id="form-detalhes">
-                <div class="tabs">
-                    <div class="tab-btn active" id="btn-tab-pre" onclick="mudarAba('pre')">⚡ PRÉ-CADASTRO</div>
-                    <div class="tab-btn" id="btn-tab-comp" onclick="mudarAba('comp')">📝 COMPLETO</div>
-                </div>
-
-                <div id="tab-pre" class="tab-content active">
-                    <div class="form-group">
-                        <label>Nome do Produto</label>
-                        <input type="text" id="nome_pre" placeholder="Ex: Farinha de Mandioca">
-                    </div>
-                    <div class="form-group">
-                        <label>Preço de Venda (R$) - Opcional</label>
-                        <input type="text" id="preco_venda_pre" placeholder="0,00" onkeyup="formatarMoeda(this)">
-                    </div>
-                    <button class="btn-acao btn-save-fast" onclick="salvarPreCadastro()">⚡ SALVAR RÁPIDO</button>
-                </div>
-
-                <div id="tab-comp" class="tab-content">
-                    <div class="form-group">
-                        <label>Nome do Produto</label>
-                        <input type="text" id="nome_comp" placeholder="Ex: Farinha de Mandioca">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Categoria</label>
-                        <div class="grid-cat">
-                            <select id="categoria_comp" style="flex: 1;">
-                                <option value="">Carregando...</option>
-                            </select>
-                            <button type="button" class="btn-add-cat" onclick="adicionarNovaCategoria()">+</button>
-                        </div>
-                    </div>
-
-                    <div class="grid-3">
-                        <div class="form-group">
-                            <label>Custo (R$)</label>
-                            <input type="text" id="preco_custo_comp" placeholder="0,00" onkeyup="formatarMoeda(this); calcularPrecoVenda();">
-                        </div>
-                        <div class="form-group">
-                            <label>Margem (%)</label>
-                            <input type="number" id="porcentagem_lucro_comp" placeholder="0" onkeyup="calcularPrecoVenda()">
-                        </div>
-                        <div class="form-group">
-                            <label>Venda (R$)</label>
-                            <input type="text" id="preco_venda_comp" placeholder="0,00" onkeyup="formatarMoeda(this); calcularMargem();">
-                        </div>
-                    </div>
-
-                    <div class="bloco-estoque-inicial" id="bloco-estoque-novo">
-                        <h4>📦 Adicionar Estoque (Opcional)</h4>
-                        <div class="grid-2">
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label>Quantidade</label>
-                                <input type="number" id="ini_qtd" placeholder="Ex: 10" min="1">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label>Lote</label>
-                                <input type="text" id="ini_lote" placeholder="Ex: L123">
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Data Vencimento</label>
-                            <input type="text" id="ini_vencimento" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric" oninput="mascaraData(this)">
-                        </div>
-                    </div>
-
-                    <button class="btn-acao btn-save-full" id="btn-salvar-comp" onclick="salvarCadastroCompleto()">💾 SALVAR E ESTOCAR</button>
-                    <button class="btn-acao btn-update" id="btn-atualizar-comp" style="display: none;" onclick="salvarCadastroCompleto()">🔄 ATUALIZAR PRODUTO</button>
+                <div id="lista-consulta">
+                    <div style="text-align: center; color: var(--gray); margin-top: 30px;">Carregando produtos...</div>
                 </div>
             </div>
+
         </div>
     </main>
 
@@ -156,13 +200,37 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // VARIÁVEIS GLOBAIS
         let html5QrCode;
+        let scanTarget = 'cad'; // Controla para onde o bipe da câmera vai ('cad' ou 'cons')
         let produtoExistenteId = null; 
+        let dadosConsultaGlobais = [];
 
         const boxForm = document.getElementById('form-detalhes');
         const selectCategoria = document.getElementById('categoria_comp');
 
-        function mudarAba(aba) {
+        // --- CONTROLE DE ABAS PRINCIPAIS ---
+        function switchMainTab(tab) {
+            document.getElementById('mtab-cad').classList.remove('active');
+            document.getElementById('mtab-cons').classList.remove('active');
+            document.getElementById('view-cad').classList.remove('active');
+            document.getElementById('view-cons').classList.remove('active');
+
+            document.getElementById(`mtab-${tab}`).classList.add('active');
+            document.getElementById(`view-${tab}`).classList.add('active');
+
+            // Se mudar de aba, desliga a câmera por segurança
+            if(html5QrCode && html5QrCode.isScanning) toggleCamera();
+
+            if (tab === 'cons') {
+                carregarConsulta();
+            } else {
+                document.getElementById('codigo_barras').focus();
+            }
+        }
+
+        // --- CONTROLE DE ABAS INTERNAS (PRÉ/COMPLETO) ---
+        function mudarAbaSub(aba) {
             document.getElementById('btn-tab-pre').classList.remove('active');
             document.getElementById('btn-tab-comp').classList.remove('active');
             document.getElementById('tab-pre').classList.remove('active');
@@ -172,54 +240,12 @@
             document.getElementById(`tab-${aba}`).classList.add('active');
         }
 
+        // --- UTILITÁRIOS ---
         function mascaraData(input) {
             let v = input.value.replace(/\D/g, "");
             if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
             if (v.length > 5) v = v.substring(0, 5) + "/" + v.substring(5, 9);
             input.value = v;
-        }
-
-        async function carregarCategorias(categoriaSelecionada = "") {
-            try {
-                const { data } = await tabela_supabase.from('categorias').select('nome').order('nome', { ascending: true });
-                if (data) {
-                    selectCategoria.innerHTML = `<option value="">Selecione...</option>` + 
-                        data.map(cat => `<option value="${cat.nome}" ${cat.nome === categoriaSelecionada ? 'selected' : ''}>${cat.nome}</option>`).join('');
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        async function adicionarNovaCategoria() {
-            const { value: novaCat } = await Swal.fire({ title: 'Nova Categoria', input: 'text', showCancelButton: true, confirmButtonText: 'Salvar' });
-            if (novaCat && novaCat.trim() !== "") {
-                const nomeFormatado = novaCat.trim();
-                await tabela_supabase.from('categorias').insert([{ nome: nomeFormatado }]);
-                await carregarCategorias(nomeFormatado);
-            }
-        }
-
-        function validarEAN(ean) {
-            ean = ean.trim();
-            if (!/^\d+$/.test(ean)) return { valido: false, msg: "O código deve conter apenas números." };
-            
-            // Aceita EAN-8 e EAN-13 (os mais comuns)
-            if (![8, 12, 13, 14].includes(ean.length)) {
-                return { valido: false, msg: `Tamanho inválido! Foram lidos ${ean.length} números. Verifique se o código está legível.` };
-            }
-            
-            let suspeito = false;
-            // Se for EAN-13 e não começar com o prefixo da GS1 Brasil
-            if (ean.length === 13 && !ean.startsWith('789') && !ean.startsWith('790')) {
-                suspeito = true;
-            }
-            
-            return { valido: true, suspeito: suspeito };
-        }
-
-        function checarDigitacao(ean) {
-            produtoExistenteId = null; 
-            if (ean.length >= 8) buscarProdutoAPI(ean);
-            else boxForm.style.display = 'none'; 
         }
 
         function parseValor(s) { return parseFloat(s.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0; }
@@ -229,6 +255,102 @@
             let v = el.value.replace(/\D/g, "");
             v = (v / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
             el.value = v === "0,00" ? "" : v;
+        }
+
+        // --- LÓGICA DE CONSULTA (NOVO) ---
+        async function carregarConsulta() {
+            try {
+                // Traz os produtos e puxa as quantidades da tabela itens_venda para somar o total vendido
+                const { data, error } = await tabela_supabase
+                    .from('produtos')
+                    .select('id, codigo_barras, nome_produto, preco_venda, created_at, itens_venda(quantidade)')
+                    .order('nome_produto', { ascending: true });
+
+                if (error) throw error;
+
+                dadosConsultaGlobais = data.map(p => {
+                    // Soma a quantidade de vezes que o produto foi vendido
+                    const qtdVendida = p.itens_venda ? p.itens_venda.reduce((acc, curr) => acc + (curr.quantidade || 0), 0) : 0;
+                    
+                    // Formata Data de Cadastro
+                    const d = new Date(p.created_at);
+                    const dataCad = d.toLocaleDateString('pt-BR');
+
+                    return { ...p, qtdVendida, dataCad };
+                });
+
+                renderizarConsulta(dadosConsultaGlobais);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('lista-consulta').innerHTML = '<div style="text-align: center; color: var(--danger);">Erro ao carregar dados.</div>';
+            }
+        }
+
+        function renderizarConsulta(dados) {
+            const container = document.getElementById('lista-consulta');
+            if (dados.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--gray); margin-top: 20px;">Nenhum produto encontrado.</div>';
+                return;
+            }
+
+            container.innerHTML = dados.map(item => `
+                <div class="cons-card">
+                    <div class="cons-header">
+                        <div class="cons-nome">${item.nome_produto}</div>
+                        <div class="cons-ean">${item.codigo_barras}</div>
+                    </div>
+                    <div class="cons-stats">
+                        <div class="cons-stat-item">
+                            <span class="cons-stat-label">Cadastrado em</span>
+                            <span style="font-size: 0.9rem; font-weight: 700; color: var(--text);">${item.dataCad}</span>
+                        </div>
+                        <div class="cons-stat-item" style="text-align: center;">
+                            <span class="cons-stat-label">Vendas</span>
+                            <span class="cons-stat-val blue">${item.qtdVendida} un</span>
+                        </div>
+                        <div class="cons-stat-item" style="text-align: right;">
+                            <span class="cons-stat-label">Valor (R$)</span>
+                            <span class="cons-stat-val green">${formataInputMoeda(item.preco_venda || 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filtrarConsulta(termoDigitado) {
+            const termo = termoDigitado.toLowerCase().trim();
+            if (termo === "") {
+                renderizarConsulta(dadosConsultaGlobais);
+                return;
+            }
+            const filtrados = dadosConsultaGlobais.filter(p => 
+                p.nome_produto.toLowerCase().includes(termo) || 
+                p.codigo_barras.includes(termo)
+            );
+            renderizarConsulta(filtrados);
+        }
+
+        // --- LÓGICA DE CADASTRO ---
+        async function carregarCategorias(categoriaSelecionada = "") {
+            const { data } = await tabela_supabase.from('categorias').select('nome').order('nome', { ascending: true });
+            if (data) {
+                selectCategoria.innerHTML = `<option value="">Selecione...</option>` + 
+                    data.map(cat => `<option value="${cat.nome}" ${cat.nome === categoriaSelecionada ? 'selected' : ''}>${cat.nome}</option>`).join('');
+            }
+        }
+
+        async function adicionarNovaCategoria() {
+            const { value: novaCat } = await Swal.fire({ title: 'Nova Categoria', input: 'text', showCancelButton: true, confirmButtonText: 'Salvar' });
+            if (novaCat && novaCat.trim() !== "") {
+                await tabela_supabase.from('categorias').insert([{ nome: novaCat.trim() }]);
+                await carregarCategorias(novaCat.trim());
+            }
+        }
+
+        function checarDigitacao(ean) {
+            produtoExistenteId = null; 
+            if (ean.length >= 8) buscarProdutoAPI(ean);
+            else boxForm.style.display = 'none'; 
         }
 
         function calcularPrecoVenda() {
@@ -245,34 +367,23 @@
 
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
-
             try {
                 const { data: prodLocal } = await tabela_supabase.from('produtos').select('*').eq('codigo_barras', ean).maybeSingle();
 
                 if (prodLocal) {
                     boxForm.style.display = 'none';
-                    
                     const resp = await Swal.fire({
-                        title: 'Produto Localizado!',
-                        text: `O item "${prodLocal.nome_produto}" já existe.`,
-                        icon: 'info',
-                        showCloseButton: true,
-                        showCancelButton: false,
-                        showDenyButton: true,
-                        confirmButtonText: '📦 Ir para Estoque',
-                        denyButtonText: '📝 Completar / Atualizar',
-                        confirmButtonColor: '#2563eb',
-                        denyButtonColor: '#64748b',
-                        allowOutsideClick: true
+                        title: 'Produto Localizado!', text: `O item "${prodLocal.nome_produto}" já existe.`, icon: 'info',
+                        showCloseButton: true, showCancelButton: false, showDenyButton: true,
+                        confirmButtonText: '📦 Ir para Estoque', denyButtonText: '📝 Completar / Atualizar',
+                        confirmButtonColor: '#2563eb', denyButtonColor: '#64748b', allowOutsideClick: true
                     });
 
                     if (resp.isConfirmed) {
                         window.location.href = `movimentacoes.html?ean=${ean}`;
-                        return;
                     } else if (resp.isDenied) {
                         boxForm.style.display = 'block';
-                        mudarAba('comp');
-                        
+                        mudarAbaSub('comp');
                         produtoExistenteId = prodLocal.id;
                         
                         document.getElementById('nome_comp').value = prodLocal.nome_produto || "";
@@ -284,23 +395,17 @@
                         document.getElementById('nome_pre').value = prodLocal.nome_produto || "";
                         document.getElementById('preco_venda_pre').value = prodLocal.preco_venda ? formataInputMoeda(prodLocal.preco_venda) : "";
                         
-                        document.getElementById('ini_qtd').value = "";
-                        document.getElementById('ini_lote').value = "";
-                        document.getElementById('ini_vencimento').value = "";
-
+                        document.getElementById('ini_qtd').value = ""; document.getElementById('ini_lote').value = ""; document.getElementById('ini_vencimento').value = "";
                         document.getElementById('bloco-estoque-novo').style.display = 'block'; 
                         document.getElementById('btn-salvar-comp').style.display = 'none';
                         document.getElementById('btn-atualizar-comp').style.display = 'flex';
                     } else if (resp.isDismissed) {
-                        limparFormulario();
-                        setTimeout(() => document.getElementById('codigo_barras').focus(), 150);
+                        limparFormularioCadastro();
                     }
-
                 } else {
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
-                    mudarAba('pre');
-                    
+                    mudarAbaSub('pre');
                     document.getElementById('bloco-estoque-novo').style.display = 'block'; 
                     document.getElementById('btn-salvar-comp').style.display = 'flex';
                     document.getElementById('btn-atualizar-comp').style.display = 'none';
@@ -311,168 +416,148 @@
                     const data = await response.json();
                     const nomeSugerido = (data.status === 1 && data.product) ? (data.product.product_name_pt || data.product.product_name || "") : "";
                     
-                    document.getElementById('nome_pre').value = nomeSugerido;
-                    document.getElementById('nome_comp').value = nomeSugerido;
-                    
-                    document.getElementById('preco_venda_pre').value = "";
-                    document.getElementById('preco_custo_comp').value = "";
-                    document.getElementById('porcentagem_lucro_comp').value = "";
-                    document.getElementById('preco_venda_comp').value = "";
-                    document.getElementById('ini_qtd').value = "";
-                    document.getElementById('ini_lote').value = "";
-                    document.getElementById('ini_vencimento').value = "";
+                    document.getElementById('nome_pre').value = nomeSugerido; document.getElementById('nome_comp').value = nomeSugerido;
+                    document.getElementById('preco_venda_pre').value = ""; document.getElementById('preco_custo_comp').value = "";
+                    document.getElementById('porcentagem_lucro_comp').value = ""; document.getElementById('preco_venda_comp').value = "";
+                    document.getElementById('ini_qtd').value = ""; document.getElementById('ini_lote').value = ""; document.getElementById('ini_vencimento').value = "";
                 }
             } catch (err) { console.log(err); }
+        }
+
+        async function verificarDuplicidade(codigo) {
+            const { data: checkEan } = await tabela_supabase.from('produtos').select('id, nome_produto').eq('codigo_barras', codigo).maybeSingle();
+            if (checkEan && checkEan.id !== produtoExistenteId) {
+                Swal.fire('Duplicidade Detectada!', `Este EAN já está registrado para: <b>${checkEan.nome_produto}</b>.`, 'error');
+                return true;
+            }
+            return false;
         }
 
         async function salvarPreCadastro() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_pre').value.trim();
             const venda = parseValor(document.getElementById('preco_venda_pre').value); 
+            if (!codigo || !nome) return Swal.fire('Atenção', 'Código e Nome são obrigatórios!', 'warning');
 
-            if (!codigo || !nome) {
-                return Swal.fire('Atenção', 'Código e Nome são obrigatórios!', 'warning');
-            }
-
-            Swal.fire({ title: 'Salvando Rápido...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            const { data: checkEan } = await tabela_supabase.from('produtos').select('id, nome_produto').eq('codigo_barras', codigo).maybeSingle();
-            if (checkEan && checkEan.id !== produtoExistenteId) {
-                return Swal.fire('Duplicidade Detectada!', `Este código já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Cuidado para não sobrescrever um produto com o EAN de outro!`, 'error');
-            }
+            Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            if (await verificarDuplicidade(codigo)) return;
 
             const payload = { codigo_barras: codigo, nome_produto: nome };
             if (venda > 0) payload.preco_venda = venda; 
 
             try {
-                if (produtoExistenteId) {
-                    await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
-                    Swal.fire({ title: 'Atualizado!', icon: 'success', timer: 1000, showConfirmButton: false });
-                } else {
-                    await tabela_supabase.from('produtos').insert([payload]);
-                    Swal.fire({ title: 'Pré-Cadastro Salvo!', icon: 'success', timer: 1000, showConfirmButton: false });
-                }
-                limparFormulario();
-                setTimeout(() => document.getElementById('codigo_barras').focus(), 500);
+                if (produtoExistenteId) await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
+                else await tabela_supabase.from('produtos').insert([payload]);
+                Swal.fire({ title: 'Salvo!', icon: 'success', timer: 1000, showConfirmButton: false });
+                limparFormularioCadastro();
             } catch (err) { Swal.fire('Erro', err.message, 'error'); }
         }
 
         async function salvarCadastroCompleto() {
             const codigo = document.getElementById('codigo_barras').value.trim();
             const nome = document.getElementById('nome_comp').value.trim();
-            const categoria = selectCategoria.value;
-            const custo = parseValor(document.getElementById('preco_custo_comp').value);
-            const lucro = parseFloat(document.getElementById('porcentagem_lucro_comp').value) || 0;
             const venda = parseValor(document.getElementById('preco_venda_comp').value);
-
-            if (!codigo || !nome || !venda) {
-                return Swal.fire('Atenção', 'Código, Nome e Preço de Venda são obrigatórios no cadastro completo!', 'warning');
-            }
+            if (!codigo || !nome || !venda) return Swal.fire('Atenção', 'Código, Nome e Venda são obrigatórios!', 'warning');
 
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            if (await verificarDuplicidade(codigo)) return;
 
-            const { data: checkEan } = await tabela_supabase.from('produtos').select('id, nome_produto').eq('codigo_barras', codigo).maybeSingle();
-            if (checkEan && checkEan.id !== produtoExistenteId) {
-                return Swal.fire('Duplicidade Detectada!', `Este código já está registrado para: <b>${checkEan.nome_produto}</b>.<br><br>Cuidado para não sobrescrever um produto com o EAN de outro!`, 'error');
-            }
-
-            const payload = { codigo_barras: codigo, nome_produto: nome, categoria, preco_custo: custo, porcentagem_lucro: lucro, preco_venda: venda };
+            const payload = { 
+                codigo_barras: codigo, nome_produto: nome, categoria: selectCategoria.value, 
+                preco_custo: parseValor(document.getElementById('preco_custo_comp').value), 
+                porcentagem_lucro: parseFloat(document.getElementById('porcentagem_lucro_comp').value) || 0, preco_venda: venda 
+            };
 
             try {
-                let idProdutoParaEstoque = produtoExistenteId;
-
+                let idEstoque = produtoExistenteId;
                 if (produtoExistenteId) {
                     await tabela_supabase.from('produtos').update(payload).eq('id', produtoExistenteId);
                 } else {
-                    const { data: novoProd, error: errProd } = await tabela_supabase.from('produtos').insert([payload]).select().single();
-                    if (errProd) throw errProd;
-                    idProdutoParaEstoque = novoProd.id;
+                    const { data: novoProd, error } = await tabela_supabase.from('produtos').insert([payload]).select().single();
+                    if (error) throw error; idEstoque = novoProd.id;
                 }
 
                 const qtdIni = parseInt(document.getElementById('ini_qtd').value);
-                const loteIni = document.getElementById('ini_lote').value.trim() || 'SEM LOTE';
                 const vencIniRaw = document.getElementById('ini_vencimento').value;
-
                 if (qtdIni > 0 && vencIniRaw) {
                     const partes = vencIniRaw.split('/');
                     const vencBanco = `${partes[2]}-${partes[1]}-${partes[0]}`;
-
-                    await tabela_supabase.from('prateleira_fisica').insert([{ 
-                        produto_id: idProdutoParaEstoque, lote: loteIni, quantidade: qtdIni, data_vencimento: vencBanco 
-                    }]);
-                    await tabela_supabase.from('movimentacoes_estoque').insert([{ 
-                        produto_id: idProdutoParaEstoque, tipo: 'ENTRADA', quantidade: qtdIni, motivo: produtoExistenteId ? 'Entrada via Atualização de Cadastro' : 'Estoque Inicial de Cadastro' 
-                    }]);
+                    await tabela_supabase.from('prateleira_fisica').insert([{ produto_id: idEstoque, lote: document.getElementById('ini_lote').value.trim() || 'SEM LOTE', quantidade: qtdIni, data_vencimento: vencBanco }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: idEstoque, tipo: 'ENTRADA', quantidade: qtdIni, motivo: 'Estoque Inicial/Atualização' }]);
                 }
 
-                Swal.fire({ title: produtoExistenteId ? 'Atualizado com Sucesso!' : 'Salvo Completo!', icon: 'success', timer: 1500, showConfirmButton: false });
-                
-                limparFormulario();
-                setTimeout(() => document.getElementById('codigo_barras').focus(), 500);
+                Swal.fire({ title: 'Salvo Completo!', icon: 'success', timer: 1500, showConfirmButton: false });
+                limparFormularioCadastro();
             } catch (err) { Swal.fire('Erro', err.message, 'error'); }
         }
 
-        function limparFormulario() {
+        function limparFormularioCadastro() {
             document.getElementById('codigo_barras').value = "";
             produtoExistenteId = null;
             boxForm.style.display = 'none';
-            if (document.getElementById('reader').style.display !== 'none') stopScanner();
+            setTimeout(() => document.getElementById('codigo_barras').focus(), 150);
         }
 
-        document.getElementById('btn-toggle-scan').addEventListener('click', () => {
-            const readerDiv = document.getElementById('reader');
+        // --- MOTOR DA CÂMERA (GLOBAL) ---
+        function validarEAN(ean) {
+            ean = ean.trim();
+            if (!/^\d+$/.test(ean)) return { valido: false, msg: "Apenas números." };
+            if (![8, 12, 13, 14].includes(ean.length)) return { valido: false, msg: `Tamanho inválido (${ean.length}).` };
+            let suspeito = (ean.length === 13 && !ean.startsWith('789') && !ean.startsWith('790'));
+            return { valido: true, suspeito: suspeito };
+        }
+
+        function iniciarCamera(target) {
+            scanTarget = target; // Define se a leitura vai para Cadastro ou Consulta
+            const readerDiv = document.getElementById('camera-global');
             const btnScan = document.getElementById('btn-toggle-scan');
-            if (readerDiv.style.display === 'none') {
-                html5QrCode = new Html5Qrcode("reader");
-                readerDiv.style.display = 'block';
-                btnScan.innerHTML = "🛑 PARAR CÂMERA";
-                html5QrCode.start(
-                    { facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } },
-                    (decodedText) => {
-                        if (navigator.vibrate) navigator.vibrate(100);
-                        stopScanner();
+            
+            if (readerDiv.style.display === 'block') return; // Já está rodando
 
-                        const validador = validarEAN(decodedText);
-                        
-                        if (!validador.valido) {
-                            Swal.fire('Leitura Inválida', validador.msg, 'error');
-                            return;
-                        }
+            html5QrCode = new Html5Qrcode("camera-global");
+            readerDiv.style.display = 'block';
+            btnScan.style.display = 'block';
 
-                        if (validador.suspeito) {
-                            Swal.fire({
-                                title: 'Leitura Suspeita 🤔',
-                                text: `A câmera leu: ${decodedText}\n\nEsse código não parece pertencer ao padrão nacional (GS1 Brasil). Reflexos no plástico podem causar leituras erradas.\n\nConfirme se este número é exatamente o que está impresso na embalagem.`,
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: '✔️ É isso mesmo',
-                                cancelButtonText: '❌ Tentar de novo',
-                                confirmButtonColor: '#2563eb',
-                                cancelButtonColor: '#dc2626'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    document.getElementById('codigo_barras').value = decodedText;
-                                    buscarProdutoAPI(decodedText);
-                                } else {
-                                    document.getElementById('codigo_barras').value = "";
-                                }
-                            });
+            html5QrCode.start(
+                { facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    toggleCamera(); // Desliga a câmera após a leitura
+
+                    const validador = validarEAN(decodedText);
+                    if (!validador.valido) return Swal.fire('Leitura Inválida', validador.msg, 'error');
+
+                    const processarLeitura = (ean) => {
+                        if (scanTarget === 'cad') {
+                            document.getElementById('codigo_barras').value = ean;
+                            buscarProdutoAPI(ean);
                         } else {
-                            document.getElementById('codigo_barras').value = decodedText;
-                            buscarProdutoAPI(decodedText);
+                            document.getElementById('input_consulta').value = ean;
+                            filtrarConsulta(ean);
                         }
-                    }, () => {}
-                ).catch(() => stopScanner());
-            } else {
-                stopScanner();
-            }
-        });
+                    };
 
-        async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('btn-toggle-scan').innerHTML = "📸 ESCANEAR CÓDIGO";
+                    if (validador.suspeito) {
+                        Swal.fire({
+                            title: 'Leitura Suspeita 🤔', text: `A câmera leu: ${decodedText}\n\nConfirme se este número está correto.`,
+                            icon: 'warning', showCancelButton: true, confirmButtonText: '✔️ Correto', cancelButtonText: '❌ Tentar de novo',
+                            confirmButtonColor: '#2563eb', cancelButtonColor: '#dc2626'
+                        }).then((result) => {
+                            if (result.isConfirmed) processarLeitura(decodedText);
+                        });
+                    } else {
+                        processarLeitura(decodedText);
+                    }
+                }, () => {}
+            ).catch(() => toggleCamera());
         }
+
+        async function toggleCamera() {
+            if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop();
+            document.getElementById('camera-global').style.display = 'none';
+            document.getElementById('btn-toggle-scan').style.display = 'none';
+        }
+
     </script>
 </body>
 </html>
