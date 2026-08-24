@@ -18,10 +18,12 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
+        /* Cabeçalho */
         header { background: var(--white); padding: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-shrink: 0;}
         .btn-voltar-topo { background: #f1f5f9; border: 2px solid #cbd5e1; border-radius: 10px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; text-decoration: none; color: var(--text);}
         .titulo-topo { font-size: 1.1rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
 
+        /* Abas Principais (Cadastrar / Consultar) */
         .main-tabs { display: flex; background: var(--white); box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; z-index: 9;}
         .m-tab { flex: 1; padding: 15px; text-align: center; font-weight: 900; color: var(--gray); border-bottom: 3px solid transparent; text-transform: uppercase; cursor: pointer; transition: 0.2s;}
         .m-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -29,18 +31,22 @@
         main { flex: 1; overflow-y: auto; padding: 15px; display: flex; justify-content: center; align-items: flex-start;}
         .container { width: 100%; max-width: 500px; }
 
+        /* Visualizações Principais */
         .view-section { display: none; }
         .view-section.active { display: block; }
 
+        /* Estilos Gerais de Formulário */
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; color: #334155; }
         input, select { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 1.1rem; outline: none; transition: border-color 0.2s; background: var(--white); }
         input:focus, select:focus { border-color: var(--primary); }
-        input:disabled { background-color: #e2e8f0; cursor: not-allowed; }
+        input:disabled { background-color: #f1f5f9; cursor: not-allowed; color: #0f172a; font-weight: bold;}
         
+        /* Câmera Global */
         #camera-global { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; display: none; border: 2px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
         .btn-scan { width: 100%; background-color: #475569; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; transition: 0.2s; }
 
+        /* Módulo Cadastrar */
         .box-cadastro { background: var(--white); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .tabs { display: flex; background: #f1f5f9; border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 2px solid #e2e8f0;}
         .tab-btn { flex: 1; padding: 12px 0; text-align: center; font-weight: 800; font-size: 0.9rem; color: var(--gray); cursor: pointer; transition: 0.2s; }
@@ -63,6 +69,7 @@
         .btn-update { background-color: var(--primary); }
         #form-detalhes { display: none; margin-top: 20px; border-top: 2px dashed #e2e8f0; padding-top: 20px; }
 
+        /* Módulo Consultar */
         .search-area-cons { display: flex; gap: 8px; margin-bottom: 15px; }
         .cons-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-left: 4px solid var(--primary);}
         .cons-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;}
@@ -96,6 +103,7 @@
 
     <main>
         <div class="container">
+            <!-- CÂMERA GLOBAL -->
             <div id="camera-global"></div>
             <button type="button" class="btn-scan" id="btn-toggle-scan" style="display: none;" onclick="toggleCamera()">🛑 PARAR CÂMERA</button>
 
@@ -193,14 +201,19 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // VARIÁVEIS GLOBAIS
         let html5QrCode;
         let scanTarget = 'cad'; 
         let produtoExistenteId = null; 
         let dadosConsultaGlobais = [];
+        let timeoutBusca = null; // Para o debounce (evitar loop)
+        let isSearching = false; // Trava contra múltiplas requisições simultâneas
 
         const boxForm = document.getElementById('form-detalhes');
         const selectCategoria = document.getElementById('categoria_comp');
+        const eanInput = document.getElementById('codigo_barras');
 
+        // --- CONTROLE DE ABAS ---
         function switchMainTab(tab) {
             document.getElementById('mtab-cad').classList.remove('active');
             document.getElementById('mtab-cons').classList.remove('active');
@@ -229,6 +242,7 @@
             document.getElementById(`tab-${aba}`).classList.add('active');
         }
 
+        // --- UTILITÁRIOS ---
         function mascaraData(input) {
             let v = input.value.replace(/\D/g, "");
             if (v.length > 2) v = v.substring(0, 2) + "/" + v.substring(2);
@@ -245,29 +259,18 @@
             el.value = v === "0,00" ? "" : v;
         }
 
-        // --- LÓGICA DE CONSULTA BLINDADA ---
+        // --- LÓGICA DE CONSULTA ---
         async function carregarConsulta() {
             try {
-                // 1. Busca os Produtos
-                const { data: prods, error: errProds } = await tabela_supabase
-                    .from('produtos')
-                    .select('*')
-                    .order('nome_produto', { ascending: true });
-
+                const { data: prods, error: errProds } = await tabela_supabase.from('produtos').select('*').order('nome_produto', { ascending: true });
                 if (errProds) throw errProds;
 
-                // 2. Busca as vendas e soma no JavaScript para evitar erros do banco
-                const { data: itens, error: errItens } = await tabela_supabase
-                    .from('itens_venda')
-                    .select('produto_id, quantidade');
-
+                const { data: itens, error: errItens } = await tabela_supabase.from('itens_venda').select('produto_id, quantidade');
                 if (errItens) throw errItens;
 
                 const vendasMap = {};
                 if (itens) {
-                    itens.forEach(i => {
-                        vendasMap[i.produto_id] = (vendasMap[i.produto_id] || 0) + i.quantidade;
-                    });
+                    itens.forEach(i => { vendasMap[i.produto_id] = (vendasMap[i.produto_id] || 0) + i.quantidade; });
                 }
 
                 dadosConsultaGlobais = prods.map(p => {
@@ -328,7 +331,7 @@
             renderizarConsulta(filtrados);
         }
 
-        // --- LÓGICA DE CADASTRO ---
+        // --- LÓGICA DE CADASTRO BLINDADA CONTRA LOOPS E ERROS ---
         async function carregarCategorias(categoriaSelecionada = "") {
             const { data } = await tabela_supabase.from('categorias').select('nome').order('nome', { ascending: true });
             if (data) {
@@ -346,9 +349,20 @@
         }
 
         function checarDigitacao(ean) {
+            // Se o campo EAN estiver desabilitado (em modo Atualização), ignora as teclas para não fazer loop
+            if (eanInput.disabled) return; 
+            
             produtoExistenteId = null; 
-            if (ean.length >= 8) buscarProdutoAPI(ean);
-            else boxForm.style.display = 'none'; 
+            clearTimeout(timeoutBusca); // Zera o temporizador
+            
+            if (ean.length >= 8) {
+                // Aguarda 600ms antes de buscar (Debounce)
+                timeoutBusca = setTimeout(() => {
+                    buscarProdutoAPI(ean);
+                }, 600);
+            } else {
+                boxForm.style.display = 'none'; 
+            }
         }
 
         function calcularPrecoVenda() {
@@ -365,6 +379,11 @@
 
         async function buscarProdutoAPI(ean) {
             if (!ean || ean.length < 8) return;
+            if (eanInput.disabled) return; // Segurança extra contra chamadas acidentais
+            if (isSearching) return; // Bloqueia duas buscas ao mesmo tempo
+            
+            isSearching = true;
+
             try {
                 const { data: prodLocal } = await tabela_supabase.from('produtos').select('*').eq('codigo_barras', ean).maybeSingle();
 
@@ -380,15 +399,16 @@
                     if (resp.isConfirmed) {
                         window.location.href = `movimentacoes.html?ean=${ean}`;
                     } else if (resp.isDenied) {
-                        // PREPARAÇÃO SEGURA DA TELA DE ATUALIZAÇÃO
+                        // FORÇA A ATUALIZAÇÃO SEGURA
                         boxForm.style.display = 'block';
                         mudarAbaSub('comp');
                         produtoExistenteId = prodLocal.id;
                         
-                        // Trava o campo EAN e muda o botão para LIMPAR
-                        const eanInput = document.getElementById('codigo_barras');
+                        // Garante que o EAN apareça e o campo fique TRAVADO
+                        eanInput.value = prodLocal.codigo_barras;
+                        eanInput.disabled = true; 
+                        
                         const btnAcao = document.getElementById('btn-acao-ean');
-                        eanInput.disabled = true;
                         btnAcao.innerHTML = "🧹 LIMPAR / NOVO CADASTRO";
                         btnAcao.style.backgroundColor = "var(--danger)";
                         btnAcao.onclick = limparFormularioCadastro;
@@ -410,6 +430,7 @@
                         limparFormularioCadastro();
                     }
                 } else {
+                    eanInput.value = ean; // Garante a visualização
                     produtoExistenteId = null;
                     boxForm.style.display = 'block';
                     mudarAbaSub('pre');
@@ -428,7 +449,11 @@
                     document.getElementById('porcentagem_lucro_comp').value = ""; document.getElementById('preco_venda_comp').value = "";
                     document.getElementById('ini_qtd').value = ""; document.getElementById('ini_lote').value = ""; document.getElementById('ini_vencimento').value = "";
                 }
-            } catch (err) { console.log(err); }
+            } catch (err) { 
+                console.log(err); 
+            } finally {
+                isSearching = false; // Destrava para a próxima busca
+            }
         }
 
         async function verificarDuplicidade(codigo) {
@@ -499,11 +524,10 @@
         }
 
         function limparFormularioCadastro() {
-            const eanInput = document.getElementById('codigo_barras');
             const btnAcao = document.getElementById('btn-acao-ean');
             
             eanInput.value = "";
-            eanInput.disabled = false;
+            eanInput.disabled = false; // Destrava o input
             btnAcao.innerHTML = "📸 ESCANEAR CÓDIGO";
             btnAcao.style.backgroundColor = "#475569";
             btnAcao.onclick = () => iniciarCamera('cad');
