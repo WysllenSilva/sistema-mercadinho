@@ -117,14 +117,13 @@
                 const end = new Date(`${document.getElementById('data_fim').value}T23:59:59`).toISOString();
                 const statusFiltro = document.getElementById('filtro_status').value;
 
-                // Prepara a consulta base
+                // Traz também as colunas vendedor_nome e cancelado_por
                 let query = tabela_supabase
                     .from('vendas')
-                    .select(`id, valor_total, forma_pagamento, status, data_venda, desconto, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
+                    .select(`id, valor_total, forma_pagamento, status, vendedor_nome, cancelado_por, data_venda, desconto, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
                     .gte('data_venda', start).lte('data_venda', end)
                     .order('data_venda', { ascending: false });
 
-                // Adiciona o filtro de status se não for "TODAS"
                 if (statusFiltro !== 'TODAS') {
                     query = query.eq('status', statusFiltro);
                 }
@@ -151,7 +150,6 @@
                 const dataF = new Date(v.data_venda).toLocaleString('pt-BR');
                 const isCancelada = v.status === 'CANCELADA';
                 
-                // Estilos dinâmicos se estiver cancelada
                 const classCard = isCancelada ? 'venda-card cancelada' : 'venda-card';
                 const badgeStatus = isCancelada ? `<span class="badge-status status-CANCELADA">CANCELADA</span>` : '';
                 const btnCancelar = isCancelada ? '' : `<button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️ Estornar</button>`;
@@ -184,8 +182,14 @@
             let html = `<div class="recibo-container">`;
             
             if (v.status === 'CANCELADA') {
-                html += `<div style="background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;">⚠️ ESTA VENDA FOI CANCELADA</div>`;
+                html += `<div style="background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;">
+                            ⚠️ ESTA VENDA FOI CANCELADA<br>
+                            <span style="font-size: 0.8rem; color: #991b1b; font-weight: normal;">Estornada por: ${v.cancelado_por || 'Administrador'}</span>
+                         </div>`;
             }
+
+            // Exibe quem fez a venda logo no topo do cupom
+            html += `<div style="margin-bottom: 10px; font-size: 0.85rem; color: #64748b; font-weight: 600;">👤 Vendedor(a): <span style="color: var(--text);">${v.vendedor_nome || 'Caixa Padrão'}</span></div>`;
 
             v.itens_venda.forEach(item => {
                 const nome = item.produtos ? item.produtos.nome_produto : 'Item Removido';
@@ -248,7 +252,6 @@
                 const vendaAlvo = vendasCarregadas.find(v => v.id === vendaId);
                 
                 if (vendaAlvo && vendaAlvo.itens_venda) {
-                    // 1. Devolve os itens para a prateleira e registra movimentação
                     for (const item of vendaAlvo.itens_venda) {
                         await tabela_supabase.from('prateleira_fisica').insert([{
                             produto_id: item.produto_id, lote: 'ESTORNO_VENDA', quantidade: item.quantidade, data_vencimento: '2099-12-31'
@@ -260,8 +263,12 @@
                     }
                 }
 
-                // 2. ATUALIZA o status da venda para CANCELADA (Não deleta mais!)
-                const { error: errUpdate } = await tabela_supabase.from('vendas').update({ status: 'CANCELADA' }).eq('id', vendaId);
+                // ATUALIZA A VENDA GRAVANDO O NOME DE QUEM CANCELOU
+                const { error: errUpdate } = await tabela_supabase.from('vendas').update({ 
+                    status: 'CANCELADA',
+                    cancelado_por: adminUser.nome 
+                }).eq('id', vendaId);
+                
                 if (errUpdate) throw errUpdate;
 
                 Swal.fire({ title: 'Venda Cancelada!', text: 'O estoque foi estornado e a venda anulada com sucesso.', icon: 'success', timer: 2000, showConfirmButton: false });

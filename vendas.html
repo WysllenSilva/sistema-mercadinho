@@ -112,6 +112,9 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // --- Pega o usuário logado para gravar quem fez a venda ---
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuario_mercadinho')) || { nome: 'Desconhecido' };
+
         let carrinho = [];
         let totalCarrinhoBruto = 0;
         let configPix = { chave: "", nome: "", cidade: "" };
@@ -182,30 +185,16 @@
             const qtdInput = parseInt(document.getElementById('qtd_input').value) || 1;
             document.getElementById('codigo_barras').value = ""; 
             try {
-                // Modificado: Agora seleciona a coluna 'vendido_por_peso' também
                 const { data: prod } = await tabela_supabase.from('produtos').select(`id, nome_produto, preco_venda, vendido_por_peso, estoque_minimo`).eq('codigo_barras', ean).maybeSingle();
                 
                 if (prod) {
                     if (prod.vendido_por_peso) {
-                        // É produto de peso! Pede os gramas na hora.
                         const { value: gramas } = await Swal.fire({
-                            title: 'Produto Pesável ⚖️',
-                            text: `Informe o peso em Gramas (g) para: ${prod.nome_produto}`,
-                            input: 'number',
-                            inputAttributes: { min: 1, step: 1 },
-                            inputPlaceholder: 'Ex: 850',
-                            showCancelButton: true,
-                            confirmButtonText: 'Adicionar',
-                            cancelButtonText: 'Cancelar',
-                            confirmButtonColor: '#2563eb'
+                            title: 'Produto Pesável ⚖️', text: `Informe o peso em Gramas (g) para: ${prod.nome_produto}`, input: 'number',
+                            inputAttributes: { min: 1, step: 1 }, inputPlaceholder: 'Ex: 850', showCancelButton: true, confirmButtonText: 'Adicionar', confirmButtonColor: '#2563eb'
                         });
-
-                        if (gramas && gramas > 0) {
-                            const pesoKg = parseFloat(gramas) / 1000;
-                            adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, pesoKg, true);
-                        }
+                        if (gramas && gramas > 0) adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, parseFloat(gramas) / 1000, true);
                     } else {
-                        // Produto normal de unidade
                         adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, qtdInput, false);
                     }
                     document.getElementById('qtd_input').value = "1"; 
@@ -216,44 +205,24 @@
         }
 
         function adicionarAoCarrinho(id, nome, preco, qtdAdicionar, isPeso) {
-            // Se for unidade, empilha. Se for peso, empilha ou cria nova linha? Empilhar somando os pesos é melhor.
             const index = carrinho.findIndex(item => item.id === id);
-            if (index > -1 && carrinho[index].isPeso === isPeso) {
-                carrinho[index].quantidade += qtdAdicionar;
-            } else {
-                carrinho.push({ id, nome, preco, quantidade: qtdAdicionar, isPeso });
-            }
+            if (index > -1 && carrinho[index].isPeso === isPeso) { carrinho[index].quantidade += qtdAdicionar; } 
+            else { carrinho.push({ id, nome, preco, quantidade: qtdAdicionar, isPeso }); }
             atualizarInterface();
             if (navigator.vibrate) navigator.vibrate(100); 
         }
 
         function removerItemTotal(index) { carrinho.splice(index, 1); atualizarInterface(); }
-        
-        function alterarQtd(index, delta) {
-            carrinho[index].quantidade += delta;
-            if (carrinho[index].quantidade <= 0) carrinho.splice(index, 1);
-            atualizarInterface();
-        }
+        function alterarQtd(index, delta) { carrinho[index].quantidade += delta; if (carrinho[index].quantidade <= 0) carrinho.splice(index, 1); atualizarInterface(); }
 
         window.editarPeso = async function(index) {
             const item = carrinho[index];
             const { value: gramas } = await Swal.fire({
-                title: 'Editar Peso ⚖️',
-                text: `Altere o peso em Gramas (g) para: ${item.nome}`,
-                input: 'number',
-                inputValue: (item.quantidade * 1000).toFixed(0),
-                inputAttributes: { min: 1, step: 1 },
-                showCancelButton: true,
-                confirmButtonText: 'Atualizar',
-                confirmButtonColor: '#2563eb'
+                title: 'Editar Peso ⚖️', text: `Altere o peso em Gramas (g) para: ${item.nome}`, input: 'number',
+                inputValue: (item.quantidade * 1000).toFixed(0), inputAttributes: { min: 1, step: 1 }, showCancelButton: true, confirmButtonText: 'Atualizar', confirmButtonColor: '#2563eb'
             });
-
-            if (gramas && gramas > 0) {
-                carrinho[index].quantidade = parseFloat(gramas) / 1000;
-                atualizarInterface();
-            } else if (gramas === "0") {
-                removerItemTotal(index);
-            }
+            if (gramas && gramas > 0) { carrinho[index].quantidade = parseFloat(gramas) / 1000; atualizarInterface(); } 
+            else if (gramas === "0") { removerItemTotal(index); }
         };
 
         function formatarValor(val) { return "R$ " + val.toFixed(2).replace('.', ','); }
@@ -270,11 +239,7 @@
             lista.innerHTML = carrinho.map((item, index) => {
                 const subtotal = item.quantidade * item.preco;
                 totalCarrinhoBruto += subtotal;
-                
-                // Layout Inteligente: Exibe (Kg) ou (Un)
                 const descPreco = item.isPeso ? `Kg: ${formatarValor(item.preco)}` : `Un: ${formatarValor(item.preco)}`;
-                
-                // Botão de Controle (Peso ou Unidade)
                 const displayQtd = item.isPeso ? `${(item.quantidade * 1000).toFixed(0)}g` : `${item.quantidade}`;
                 const btnControle = item.isPeso 
                     ? `<button class="btn-qty" style="width: auto; padding: 0 10px; font-size: 0.9rem;" onclick="window.editarPeso(${index})">⚖️ ${displayQtd}</button>`
@@ -297,84 +262,46 @@
         }
 
         // --- CHECKOUT SEGURO ---
-        window.parseMoeda = function(texto) { 
-            if (!texto) return 0;
-            let val = texto.toString().replace('R$', '').trim().replace(/\./g, "").replace(",", ".");
-            return parseFloat(val) || 0; 
-        };
-
-        window.formatarMoedaCheckout = function(el) {
-            let valor = el.value.replace(/\D/g, "");
-            valor = (valor / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-            el.value = valor === "0,00" ? "" : valor;
-        };
-
-        window.getSumActive = function() {
-            let sum = 0;
-            if(document.getElementById('btn-dinheiro').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_dinheiro').value);
-            if(document.getElementById('btn-pix').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_pix').value);
-            if(document.getElementById('btn-cartao').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_cartao').value);
-            return sum;
-        }
+        window.parseMoeda = function(texto) { if (!texto) return 0; let val = texto.toString().replace('R$', '').trim().replace(/\./g, "").replace(",", "."); return parseFloat(val) || 0; };
+        window.formatarMoedaCheckout = function(el) { let valor = el.value.replace(/\D/g, ""); valor = (valor / 100).toFixed(2).replace(".", ",").replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1."); el.value = valor === "0,00" ? "" : valor; };
+        window.getSumActive = function() { let sum = 0; if(document.getElementById('btn-dinheiro').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_dinheiro').value); if(document.getElementById('btn-pix').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_pix').value); if(document.getElementById('btn-cartao').classList.contains('active')) sum += window.parseMoeda(document.getElementById('chk_cartao').value); return sum; }
 
         window.togglePayMethod = function(method) {
-            const btn = document.getElementById('btn-' + method);
-            const row = document.getElementById('row-' + method);
-            const input = document.getElementById('chk_' + method);
-
+            const btn = document.getElementById('btn-' + method); const row = document.getElementById('row-' + method); const input = document.getElementById('chk_' + method);
             btn.classList.toggle('active');
-
             if (btn.classList.contains('active')) {
                 row.style.display = 'flex'; 
                 let total = window.parseMoeda(document.getElementById('chk_total_final').innerText);
-                let sumOther = window.getSumActive();
-                let rem = total - sumOther;
+                let sumOther = window.getSumActive(); let rem = total - sumOther;
                 if (rem > 0 && input.value === "") { input.value = rem.toFixed(2).replace('.', ','); window.formatarMoedaCheckout(input); }
-            } else {
-                row.style.display = 'none'; input.value = "";           
-            }
+            } else { row.style.display = 'none'; input.value = ""; }
             window.recalcularCheckout();
         }
 
         window.recalcularCheckout = function() {
             let valDesconto = window.parseMoeda(document.getElementById('chk_desconto').value);
             if (valDesconto > totalCarrinhoBruto) { valDesconto = totalCarrinhoBruto; document.getElementById('chk_desconto').value = formatarValor(valDesconto).replace('R$ ', ''); }
-            const totalComDesconto = totalCarrinhoBruto - valDesconto;
-            document.getElementById('chk_total_final').innerText = formatarValor(totalComDesconto);
+            const totalComDesconto = totalCarrinhoBruto - valDesconto; document.getElementById('chk_total_final').innerText = formatarValor(totalComDesconto);
 
-            const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active');
-            const isPixAtivo = document.getElementById('btn-pix').classList.contains('active');
-            const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
-
-            const valDinheiro = isDinAtivo ? window.parseMoeda(document.getElementById('chk_dinheiro').value) : 0;
-            const valPix = isPixAtivo ? window.parseMoeda(document.getElementById('chk_pix').value) : 0;
-            const valCartao = isCarAtivo ? window.parseMoeda(document.getElementById('chk_cartao').value) : 0;
+            const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active'); const isPixAtivo = document.getElementById('btn-pix').classList.contains('active'); const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
+            const valDinheiro = isDinAtivo ? window.parseMoeda(document.getElementById('chk_dinheiro').value) : 0; const valPix = isPixAtivo ? window.parseMoeda(document.getElementById('chk_pix').value) : 0; const valCartao = isCarAtivo ? window.parseMoeda(document.getElementById('chk_cartao').value) : 0;
             
-            const totalRecebido = valDinheiro + valPix + valCartao;
-            const diferenca = totalRecebido - totalComDesconto;
-            const statusBox = document.getElementById('chk_status');
-            const btnConfirm = Swal.getConfirmButton();
+            const totalRecebido = valDinheiro + valPix + valCartao; const diferenca = totalRecebido - totalComDesconto;
+            const statusBox = document.getElementById('chk_status'); const btnConfirm = Swal.getConfirmButton();
 
             const qrContainer = document.getElementById('box-qr-pix');
             if (isPixAtivo && valPix > 0 && configPix.chave !== "") {
-                const copiaEcola = gerarCopiaEColaPix(valPix);
-                document.getElementById('img-qr-pix').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(copiaEcola)}`;
-                document.getElementById('txt-pix-copia').innerText = copiaEcola;
-                qrContainer.style.display = 'block';
+                const copiaEcola = gerarCopiaEColaPix(valPix); document.getElementById('img-qr-pix').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(copiaEcola)}`;
+                document.getElementById('txt-pix-copia').innerText = copiaEcola; qrContainer.style.display = 'block';
             } else { qrContainer.style.display = 'none'; }
 
-            if (!isDinAtivo && !isPixAtivo && !isCarAtivo) {
-                statusBox.className = 'mc-status aguardando'; statusBox.innerText = 'Toque em como o cliente vai pagar 👆'; btnConfirm.disabled = true;
-            } else if (totalRecebido === 0) {
-                statusBox.className = 'mc-status aguardando'; statusBox.innerText = 'Aguardando valores...'; btnConfirm.disabled = true;
-            } else if (diferenca < -0.01) {
-                statusBox.className = 'mc-status falta'; statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`; btnConfirm.disabled = true;
-            } else if (diferenca > 0.01) {
+            if (!isDinAtivo && !isPixAtivo && !isCarAtivo) { statusBox.className = 'mc-status aguardando'; statusBox.innerText = 'Toque em como o cliente vai pagar 👆'; btnConfirm.disabled = true; } 
+            else if (totalRecebido === 0) { statusBox.className = 'mc-status aguardando'; statusBox.innerText = 'Aguardando valores...'; btnConfirm.disabled = true; } 
+            else if (diferenca < -0.01) { statusBox.className = 'mc-status falta'; statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`; btnConfirm.disabled = true; } 
+            else if (diferenca > 0.01) {
                 if (isDinAtivo && valDinheiro > 0) { statusBox.className = 'mc-status troco'; statusBox.innerText = `Troco: ${formatarValor(diferenca)}`; btnConfirm.disabled = false; } 
                 else { statusBox.className = 'mc-status falta'; statusBox.innerText = `Valor acima (Sem dinheiro p/ troco)`; btnConfirm.disabled = true; }
-            } else {
-                statusBox.className = 'mc-status ok'; statusBox.innerText = 'Valor Exato ✔️'; btnConfirm.disabled = false;
-            }
+            } else { statusBox.className = 'mc-status ok'; statusBox.innerText = 'Valor Exato ✔️'; btnConfirm.disabled = false; }
         };
 
         function abrirCheckout() {
@@ -427,10 +354,7 @@
                 title: 'Pagamento', html: htmlCheckout, showCancelButton: true, confirmButtonText: '✔️ CONFIRMAR VENDA', cancelButtonText: 'Voltar', confirmButtonColor: '#16a34a',
                 didOpen: () => { Swal.getConfirmButton().disabled = true; },
                 preConfirm: () => {
-                    const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active');
-                    const isPixAtivo = document.getElementById('btn-pix').classList.contains('active');
-                    const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
-
+                    const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active'); const isPixAtivo = document.getElementById('btn-pix').classList.contains('active'); const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
                     return {
                         desc: window.parseMoeda(document.getElementById('chk_desconto').value),
                         din: isDinAtivo ? window.parseMoeda(document.getElementById('chk_dinheiro').value) : 0,
@@ -438,9 +362,7 @@
                         car: isCarAtivo ? window.parseMoeda(document.getElementById('chk_cartao').value) : 0
                     };
                 }
-            }).then((result) => { 
-                if (result.isConfirmed) processarVendaBanco(result.value); 
-            });
+            }).then((result) => { if (result.isConfirmed) processarVendaBanco(result.value); });
         }
 
         async function processarVendaBanco(pagamento) {
@@ -460,14 +382,22 @@
                     dinheiroRealRecebido = vDin - (totalPagoGeral - totalComDesconto);
                 }
 
+                // INSERE A VENDA COM O NOME DO VENDEDOR
                 const { data: novaVenda, error: errVenda } = await tabela_supabase.from('vendas').insert([{ 
-                    valor_total: totalComDesconto, forma_pagamento: formaPrincipal, desconto: vDesc, pgto_dinheiro: dinheiroRealRecebido, pgto_pix: vPix, pgto_cartao: vCar
+                    valor_total: totalComDesconto, 
+                    forma_pagamento: formaPrincipal, 
+                    desconto: vDesc, 
+                    pgto_dinheiro: dinheiroRealRecebido, 
+                    pgto_pix: vPix, 
+                    pgto_cartao: vCar,
+                    vendedor_nome: usuarioLogado.nome
                 }]).select().single();
+                
                 if (errVenda) throw errVenda;
 
                 for (const item of carrinho) {
                     await tabela_supabase.from('itens_venda').insert([{ venda_id: novaVenda.id, produto_id: item.id, quantidade: item.quantidade, preco_unitario: item.preco }]);
-                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: 'Venda PDV' }]);
+                    await tabela_supabase.from('movimentacoes_estoque').insert([{ produto_id: item.id, tipo: 'SAIDA_VENDA', quantidade: item.quantidade, motivo: `Venda PDV - ${usuarioLogado.nome}` }]);
 
                     let qtdRestante = item.quantidade;
                     const { data: lotes } = await tabela_supabase.from('prateleira_fisica').select('id, quantidade').eq('produto_id', item.id).order('data_vencimento', { ascending: true }); 
@@ -499,7 +429,7 @@
             Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             try {
                 const hoje = new Date(); const start = new Date(hoje.setHours(0,0,0,0)).toISOString(); const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
-                const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end);
+                const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end).eq('status', 'CONCLUIDA');
                 if (error) throw error;
 
                 let totais = { PIX: 0, DINHEIRO: 0, CARTAO: 0, TOTAL: 0 };
