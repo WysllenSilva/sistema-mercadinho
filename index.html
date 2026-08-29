@@ -2,159 +2,72 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Login - Mercadinho Elshaday</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Acesso - Mercadinho Elshaday</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #2563eb; --primary-dark: #1d4ed8; 
-            --success: #16a34a; --danger: #dc2626;
-            --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
-            --gray-light: #f1f5f9; --gray-border: #cbd5e1;
+            --primary: #2563eb; --bg: #f8fafc; --text: #0f172a; --white: #ffffff;
         }
-        
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         
         body { 
-            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); 
-            color: var(--text); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            padding: 15px;
+            background-color: var(--primary); /* Fundo azul moderno para login */
+            display: flex; flex-direction: column; height: 100vh; height: 100dvh; 
+            align-items: center; padding: 20px;
         }
 
-        .login-card { 
-            background: var(--white); 
-            width: 100%; 
-            max-width: 380px; 
-            padding: 30px 20px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
+        .header-login { margin-top: 40px; margin-bottom: 30px; text-align: center; color: white;}
+        .app-title { font-size: 2.2rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;}
+        .app-subtitle { font-size: 1rem; font-weight: 600; opacity: 0.9; margin-top: 5px; }
+
+        .login-container { 
+            background: var(--white); width: 100%; max-width: 400px; border-radius: 20px; 
+            padding: 25px 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            display: flex; flex-direction: column; gap: 15px; overflow-y: auto; max-height: 70vh;
         }
 
-        .logo-icon { font-size: 2.5rem; margin-bottom: 5px; }
-        .mercado-title { font-size: 1.4rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
-        .mercado-subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .login-instrucao { text-align: center; color: #64748b; font-weight: 800; font-size: 1.1rem; margin-bottom: 10px; }
 
-        /* Visor de Senha (Estilo PIN Oculto) */
-        .pin-display { 
-            width: 100%; 
-            height: 55px; 
-            background: var(--gray-light); 
-            border: 2px solid var(--gray-border); 
-            border-radius: 12px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 12px; 
-            margin-bottom: 25px; 
-            font-size: 1.8rem; 
-            letter-spacing: 5px;
-            color: var(--primary);
-            font-weight: bold;
+        /* Lista de Usuários */
+        .user-btn {
+            background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 15px; 
+            padding: 15px; display: flex; align-items: center; gap: 15px; 
+            cursor: pointer; transition: 0.2s; text-align: left; width: 100%;
         }
-
-        .pin-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--gray-border);
-            transition: 0.2s;
-        }
-        .pin-dot.filled {
-            background: var(--primary);
-            transform: scale(1.1);
-        }
-
-        /* Teclado Numérico Moderno */
-        .keypad { 
-            width: 100%; 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 12px; 
-            margin-bottom: 20px; 
-        }
-
-        .key-btn { 
-            background: var(--gray-light); 
-            border: 1px solid #e2e8f0; 
-            border-radius: 12px; 
-            height: 55px; 
-            font-size: 1.3rem; 
-            font-weight: 700; 
-            color: var(--text); 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.1s ease; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .key-btn:active { background: #cbd5e1; transform: scale(0.95); }
+        .user-btn:active { transform: scale(0.97); border-color: var(--primary); background: #eff6ff;}
         
-        .key-clear { background: #fef2f2; color: var(--danger); font-size: 0.9rem; border-faint: 1px solid #fecaca; }
-        .key-clear:active { background: #fee2e2; }
-
-        /* Botão Entrar */
-        .btn-entrar { 
-            width: 100%; 
-            background: var(--success); 
-            color: white; 
-            border: none; 
-            border-radius: 12px; 
-            height: 55px; 
-            font-size: 1.1rem; 
-            font-weight: 800; 
-            cursor: pointer; 
-            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); 
-            transition: transform 0.1s; 
+        .user-avatar { 
+            width: 50px; height: 50px; border-radius: 12px; background: var(--primary); 
+            color: white; display: flex; align-items: center; justify-content: center; 
+            font-size: 1.5rem; font-weight: 900; flex-shrink: 0;
         }
-        .btn-entrar:active { transform: scale(0.96); }
+        
+        .user-info { flex: 1; }
+        .user-nome { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+        .user-perfil { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-top: 2px; }
 
-        .swal2-popup { border-radius: 15px !important; }
+        .swal2-popup { border-radius: 20px !important; }
+        .swal2-input { text-align: center !important; font-size: 1.5rem !important; font-weight: bold !important; letter-spacing: 5px !important;}
     </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <div class="logo-icon">🏪</div>
-        <h1 class="mercado-title">Mercadinho Elshaday</h1>
-        <p class="mercado-subtitle">Identificação de Acesso</p>
+    <div class="header-login">
+        <div class="app-title">Mercadinho</div>
+        <div class="app-subtitle">Terminal de Vendas & Gestão</div>
+    </div>
 
-        <!-- Visor do PIN -->
-        <div class="pin-display" id="visor-pin">
-            <span class="pin-dot" id="dot-0"></span>
-            <span class="pin-dot" id="dot-1"></span>
-            <span class="pin-dot" id="dot-2"></span>
-            <span class="pin-dot" id="dot-3"></span>
+    <div class="login-container" id="box-usuarios">
+        <div class="login-instrucao">Toque no seu nome para entrar:</div>
+        
+        <div id="lista-usuarios">
+            <div style="text-align: center; padding: 20px; color: #64748b;">Carregando usuários...</div>
         </div>
-
-        <!-- Teclado Numérico -->
-        <div class="keypad">
-            <button class="key-btn" onclick="digitar('1')">1</button>
-            <button class="key-btn" onclick="digitar('2')">2</button>
-            <button class="key-btn" onclick="digitar('3')">3</button>
-            <button class="key-btn" onclick="digitar('4')">4</button>
-            <button class="key-btn" onclick="digitar('5')">5</button>
-            <button class="key-btn" onclick="digitar('6')">6</button>
-            <button class="key-btn" onclick="digitar('7')">7</button>
-            <button class="key-btn" onclick="digitar('8')">8</button>
-            <button class="key-btn" onclick="digitar('9')">9</button>
-            <button class="key-btn key-clear" onclick="limparPin()">LIMPAR</button>
-            <button class="key-btn" onclick="digitar('0')">0</button>
-            <button class="key-btn key-clear" onclick="apagarUltimo()" style="color: var(--text);">⌫</button>
-        </div>
-
-        <button class="btn-entrar" onclick="fazerLogin()">ACESSAR SISTEMA</button>
     </div>
 
     <script>
@@ -162,76 +75,103 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3YWtqcGtqaWVzd2F0Ym11a2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyODg5MzUsImV4cCI6MjEwMjg2NDkzNX0.YIyrALi9r7ZZzN2Diuili-JRewuimKXU7DDDluhoEPM";
         const tabela_supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let pinAtual = "";
+        // Se já estiver logado, pula direto pro menu
+        if (localStorage.getItem('usuario_mercadinho')) {
+            window.location.href = 'menu.html';
+        }
 
-        function atualizarVisor() {
-            for (let i = 0; i < 4; i++) {
-                const dot = document.getElementById(`dot-${i}`);
-                if (i < pinAtual.length) {
-                    dot.classList.add('filled');
-                } else {
-                    dot.classList.remove('filled');
+        async function carregarUsuarios() {
+            try {
+                const { data, error } = await tabela_supabase
+                    .from('usuarios')
+                    .select('id, nome, perfil')
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                const container = document.getElementById('lista-usuarios');
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #dc2626; font-weight: bold;">
+                            Nenhum usuário encontrado.<br>Acesse o Supabase para criar o primeiro administrador.
+                        </div>`;
+                    return;
                 }
+
+                container.innerHTML = data.map(user => {
+                    // Pega a primeira letra do nome para o Avatar
+                    const inicial = user.nome.charAt(0).toUpperCase();
+                    const perfilFormatado = user.perfil === 'adm_sistema' ? 'Administrador' : 'Colaborador';
+                    
+                    return `
+                        <button class="user-btn" onclick="abrirSenha('${user.id}', '${user.nome}', '${user.perfil}')">
+                            <div class="user-avatar">${inicial}</div>
+                            <div class="user-info">
+                                <div class="user-nome">${user.nome}</div>
+                                <div class="user-perfil">${perfilFormatado}</div>
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                Swal.fire('Erro de Conexão', 'Não foi possível buscar a lista de usuários. Verifique sua internet.', 'error');
+                console.error(err);
             }
         }
 
-        function digitar(num) {
-            if (pinAtual.length < 6) { // Permite até 6 dígitos de PIN
-                pinAtual += num;
-                atualizarVisor();
-                if (navigator.vibrate) navigator.vibrate(40);
+        async function abrirSenha(id, nome, perfil) {
+            const { value: pinDigitado } = await Swal.fire({
+                title: `Olá, ${nome.split(' ')[0]}!`,
+                text: 'Digite seu PIN de acesso:',
+                input: 'password',
+                // inputmode numeric força abrir o teclado numérico grande do celular
+                inputAttributes: { maxlength: 6, inputmode: 'numeric', pattern: '[0-9]*' },
+                showCancelButton: true,
+                confirmButtonText: 'Entrar',
+                cancelButtonText: 'Voltar',
+                confirmButtonColor: '#2563eb'
+            });
+
+            if (pinDigitado) {
+                fazerLogin(id, nome, perfil, pinDigitado);
             }
         }
 
-        function limparPin() {
-            pinAtual = "";
-            atualizarVisor();
-        }
-
-        function apagarUltimo() {
-            pinAtual = pinAtual.slice(0, -1);
-            atualizarVisor();
-        }
-
-        // --- VALIDAÇÃO NO BANCO DE DADOS ---
-        async function fazerLogin() {
-            if (!pinAtual) {
-                return Swal.fire('Atenção', 'Digite o seu PIN de acesso!', 'warning');
-            }
-
+        async function fazerLogin(id, nome, perfil, pin) {
             Swal.fire({ title: 'Autenticando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                // Procura na tabela usuarios o PIN correspondente
-                const { data: usuario, error } = await tabela_supabase
+                // Checa no banco se aquele PIN pertence àquele usuário específico
+                const { data, error } = await tabela_supabase
                     .from('usuarios')
-                    .select('*')
-                    .eq('pin_senha', pinAtual)
+                    .select('id')
+                    .eq('id', id)
+                    .eq('pin_senha', pin)
                     .maybeSingle();
 
                 if (error) throw error;
 
-                if (usuario) {
-                    // Salva os dados do usuário na memória do navegador
+                if (data) {
+                    // Senha correta! Salva na memória do celular
+                    const usuario = { id, nome, perfil };
                     localStorage.setItem('usuario_mercadinho', JSON.stringify(usuario));
-
-                    Swal.fire({
-                        title: `Bem-vindo, ${usuario.nome}!`,
-                        icon: 'success',
-                        timer: 1200,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.href = 'menu.html'; // Vai para o menu principal
+                    
+                    Swal.fire({ title: 'Acesso Liberado!', icon: 'success', timer: 1000, showConfirmButton: false }).then(() => {
+                        window.location.href = 'menu.html';
                     });
                 } else {
-                    Swal.fire('Acesso Negado', 'PIN incorreto. Verifique com o Administrador.', 'error');
-                    limparPin();
+                    Swal.fire('Acesso Negado', 'PIN incorreto. Tente novamente.', 'error');
                 }
 
             } catch (err) {
-                Swal.fire('Erro', 'Falha ao conectar com o banco: ' + err.message, 'error');
+                Swal.fire('Erro', 'Falha ao tentar conectar com o banco de dados.', 'error');
             }
         }
+
+        // Carrega a lista assim que a página abrir
+        carregarUsuarios();
     </script>
 </body>
 </html>
