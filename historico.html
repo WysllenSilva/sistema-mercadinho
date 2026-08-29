@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Histórico de Vendas - Mercadinho Elshaday</title>
+    <title>Histórico de Vendas - Mercadinho</title>
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -26,22 +26,28 @@
         .filter-container { background: var(--white); padding: 15px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
         .filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
-        .filter-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+        .filter-group input, .filter-group select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 0.95rem; background: var(--white); }
         
-        .btn-filtrar { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 38px; }
+        .btn-filtrar { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; height: 40px; width: 100%; margin-top: 5px;}
 
-        .venda-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; border-left: 5px solid var(--primary); }
-        .venda-header { display: flex; justify-content: space-between; align-items: center; }
+        .venda-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; border-left: 5px solid var(--primary); transition: 0.3s; }
+        .venda-card.cancelada { border-left-color: var(--danger); opacity: 0.7; background: #fef2f2; }
+        
+        .venda-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px;}
         .venda-data { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
-        .badge-pgto { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; }
+        
+        .badges-container { display: flex; gap: 5px; }
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; }
         
         .pgto-PIX { background: #dcfce7; color: #166534; }
         .pgto-DINHEIRO { background: #fef9c3; color: #854d0e; }
         .pgto-CARTÃO { background: #dbeafe; color: #1e40af; }
         .pgto-MISTO { background: #f3e8ff; color: #6b21a8; }
+        .status-CANCELADA { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;}
         
-        .venda-body { display: flex; justify-content: space-between; align-items: flex-end; }
+        .venda-body { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px;}
         .venda-total { font-size: 1.4rem; font-weight: 900; }
+        .venda-card.cancelada .venda-total { text-decoration: line-through; color: var(--danger); }
         
         .acoes-venda { display: flex; gap: 8px; }
         .btn-detalhes { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
@@ -50,6 +56,8 @@
         .recibo-container { text-align: left; font-size: 0.95rem; }
         .recibo-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding: 8px 0; }
         .recibo-valor { font-weight: 800; }
+        
+        .swal2-popup { border-radius: 15px !important; }
     </style>
 </head>
 <body>
@@ -62,15 +70,25 @@
 
     <main>
         <div class="filter-container">
-            <div class="filter-group">
-                <label>Data Inicial</label>
-                <input type="date" id="data_inicio">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <div class="filter-group">
+                    <label>Data Inicial</label>
+                    <input type="date" id="data_inicio">
+                </div>
+                <div class="filter-group">
+                    <label>Data Final</label>
+                    <input type="date" id="data_fim">
+                </div>
             </div>
-            <div class="filter-group">
-                <label>Data Final</label>
-                <input type="date" id="data_fim">
+            <div class="filter-group" style="width: 100%; margin-top: 5px;">
+                <label>Status da Venda</label>
+                <select id="filtro_status">
+                    <option value="CONCLUIDA" selected>✅ Apenas Concluídas</option>
+                    <option value="CANCELADA">❌ Apenas Canceladas</option>
+                    <option value="TODAS">📋 Mostrar Todas</option>
+                </select>
             </div>
-            <button class="btn-filtrar" onclick="carregarHistorico()">🔍 Filtrar</button>
+            <button class="btn-filtrar" onclick="carregarHistorico()">🔍 Atualizar Filtros</button>
         </div>
 
         <div id="lista-vendas"><div style="text-align:center; padding: 20px;">Carregando...</div></div>
@@ -97,41 +115,61 @@
             try {
                 const start = new Date(`${document.getElementById('data_inicio').value}T00:00:00`).toISOString();
                 const end = new Date(`${document.getElementById('data_fim').value}T23:59:59`).toISOString();
+                const statusFiltro = document.getElementById('filtro_status').value;
 
-                const { data, error } = await tabela_supabase
+                // Prepara a consulta base
+                let query = tabela_supabase
                     .from('vendas')
-                    .select(`id, valor_total, forma_pagamento, data_venda, desconto, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
+                    .select(`id, valor_total, forma_pagamento, status, data_venda, desconto, pgto_dinheiro, pgto_pix, pgto_cartao, itens_venda (quantidade, preco_unitario, produto_id, produtos ( nome_produto ))`)
                     .gte('data_venda', start).lte('data_venda', end)
                     .order('data_venda', { ascending: false });
+
+                // Adiciona o filtro de status se não for "TODAS"
+                if (statusFiltro !== 'TODAS') {
+                    query = query.eq('status', statusFiltro);
+                }
+
+                const { data, error } = await query;
 
                 if (error) throw error;
                 vendasCarregadas = data || [];
                 renderizarVendas();
             } catch (err) {
                 console.error(err);
+                Swal.fire('Erro', 'Não foi possível carregar o histórico.', 'error');
             }
         }
 
         function renderizarVendas() {
             const container = document.getElementById('lista-vendas');
             if (vendasCarregadas.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding: 20px; color: #64748b;">Nenhuma venda encontrada.</div>`;
+                container.innerHTML = `<div style="text-align:center; padding: 20px; color: #64748b; font-weight: bold;">Nenhuma venda encontrada nesse período/status.</div>`;
                 return;
             }
 
             container.innerHTML = vendasCarregadas.map((v, i) => {
                 const dataF = new Date(v.data_venda).toLocaleString('pt-BR');
+                const isCancelada = v.status === 'CANCELADA';
+                
+                // Estilos dinâmicos se estiver cancelada
+                const classCard = isCancelada ? 'venda-card cancelada' : 'venda-card';
+                const badgeStatus = isCancelada ? `<span class="badge-status status-CANCELADA">CANCELADA</span>` : '';
+                const btnCancelar = isCancelada ? '' : `<button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️ Estornar</button>`;
+
                 return `
-                    <div class="venda-card">
+                    <div class="${classCard}">
                         <div class="venda-header">
                             <span class="venda-data">${dataF}</span>
-                            <span class="badge-pgto pgto-${v.forma_pagamento}">${v.forma_pagamento}</span>
+                            <div class="badges-container">
+                                ${badgeStatus}
+                                <span class="badge-status pgto-${v.forma_pagamento}">${v.forma_pagamento}</span>
+                            </div>
                         </div>
                         <div class="venda-body">
                             <span class="venda-total">R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span>
                             <div class="acoes-venda">
-                                <button class="btn-detalhes" onclick="abrirDetalhes(${i})">🛒 Itens</button>
-                                <button class="btn-cancelar" onclick="cancelarVenda('${v.id}')">🗑️</button>
+                                <button class="btn-detalhes" onclick="abrirDetalhes(${i})">🧾 Cupom</button>
+                                ${btnCancelar}
                             </div>
                         </div>
                     </div>
@@ -145,8 +183,12 @@
             
             let html = `<div class="recibo-container">`;
             
+            if (v.status === 'CANCELADA') {
+                html += `<div style="background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px;">⚠️ ESTA VENDA FOI CANCELADA</div>`;
+            }
+
             v.itens_venda.forEach(item => {
-                const nome = item.produtos ? item.produtos.nome_produto : 'Item';
+                const nome = item.produtos ? item.produtos.nome_produto : 'Item Removido';
                 const subItem = item.quantidade * item.preco_unitario;
                 subtotalItens += subItem;
                 html += `<div class="recibo-item"><div><b>${nome}</b><br>${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div><div class="recibo-valor">R$ ${subItem.toFixed(2).replace('.', ',')}</div></div>`;
@@ -159,7 +201,9 @@
                 html += `<div style="display:flex; justify-content:space-between; color:#dc2626; font-weight:bold;"><span>Desconto:</span><span>- R$ ${v.desconto.toFixed(2).replace('.', ',')}</span></div>`;
             }
             
-            html += `<div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:900; margin-top:5px;"><span>TOTAL:</span><span>R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span></div>`;
+            const colorTotal = v.status === 'CANCELADA' ? '#dc2626' : 'var(--text)';
+            const txtDec = v.status === 'CANCELADA' ? 'line-through' : 'none';
+            html += `<div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:900; margin-top:5px; color: ${colorTotal}; text-decoration: ${txtDec}"><span>TOTAL:</span><span>R$ ${v.valor_total.toFixed(2).replace('.', ',')}</span></div>`;
             html += `</div>`;
 
             html += `<div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-top:15px; font-size:0.95rem;">`;
@@ -169,7 +213,7 @@
             if (v.pgto_cartao > 0) html += `<div>🔵 Cartão: R$ ${v.pgto_cartao.toFixed(2).replace('.', ',')}</div>`;
             html += `</div></div>`;
 
-            Swal.fire({ title: 'Cupom da Venda', html, width: '90%' });
+            Swal.fire({ title: 'Detalhes da Venda', html, width: '90%', confirmButtonColor: '#475569', confirmButtonText: 'Fechar' });
         };
 
         async function cancelarVenda(vendaId) {
@@ -204,6 +248,7 @@
                 const vendaAlvo = vendasCarregadas.find(v => v.id === vendaId);
                 
                 if (vendaAlvo && vendaAlvo.itens_venda) {
+                    // 1. Devolve os itens para a prateleira e registra movimentação
                     for (const item of vendaAlvo.itens_venda) {
                         await tabela_supabase.from('prateleira_fisica').insert([{
                             produto_id: item.produto_id, lote: 'ESTORNO_VENDA', quantidade: item.quantidade, data_vencimento: '2099-12-31'
@@ -215,10 +260,11 @@
                     }
                 }
 
-                const { error: errDel } = await tabela_supabase.from('vendas').delete().eq('id', vendaId);
-                if (errDel) throw errDel;
+                // 2. ATUALIZA o status da venda para CANCELADA (Não deleta mais!)
+                const { error: errUpdate } = await tabela_supabase.from('vendas').update({ status: 'CANCELADA' }).eq('id', vendaId);
+                if (errUpdate) throw errUpdate;
 
-                Swal.fire({ title: 'Venda Cancelada!', text: 'O estoque foi estornado com sucesso.', icon: 'success', timer: 2000, showConfirmButton: false });
+                Swal.fire({ title: 'Venda Cancelada!', text: 'O estoque foi estornado e a venda anulada com sucesso.', icon: 'success', timer: 2000, showConfirmButton: false });
                 carregarHistorico();
 
             } catch (err) {
