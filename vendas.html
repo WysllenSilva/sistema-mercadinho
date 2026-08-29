@@ -51,7 +51,6 @@
         .btn-finalizar { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; cursor: pointer; letter-spacing: 1px; }
         .btn-finalizar:active { transform: scale(0.98); }
 
-        /* --- NOVO ESTILO DO MODAL DE CHECKOUT --- */
         .modal-checkout { text-align: left; }
         .mc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .mc-label { font-weight: 700; color: var(--text); font-size: 1.1rem;}
@@ -68,23 +67,11 @@
         .mc-status.troco { background: #fef9c3; color: #854d0e; }
         .mc-status.aguardando { background: #f1f5f9; color: var(--gray); }
 
-        /* Botões Inteligentes de Pagamento */
         .pay-methods-grid { display: flex; gap: 8px; margin-bottom: 15px; }
-        .pay-btn {
-            flex: 1; background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px 5px;
-            text-align: center; font-weight: 800; color: var(--gray); cursor: pointer; transition: 0.2s;
-            font-size: 0.9rem; user-select: none;
-        }
+        .pay-btn { flex: 1; background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 10px; padding: 12px 5px; text-align: center; font-weight: 800; color: var(--gray); cursor: pointer; transition: 0.2s; font-size: 0.9rem; user-select: none; }
         .pay-btn.dinheiro.active { background: #fef9c3; border-color: var(--warning); color: #854d0e; }
         .pay-btn.pix.active { background: #dcfce7; border-color: var(--success); color: #166534; }
         .pay-btn.cartao.active { background: #dbeafe; border-color: var(--primary); color: #1e40af; }
-
-        .search-result-item { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: left; background: var(--white);}
-        .search-result-item:active { background: #f1f5f9; }
-        .search-result-item:last-child { border-bottom: none; }
-        .sri-nome { font-weight: 800; font-size: 0.95rem; color: var(--text); margin-bottom: 3px; }
-        .sri-ean { font-size: 0.75rem; color: #64748b; }
-        .sri-preco { font-size: 1.1rem; color: var(--success); font-weight: 900; }
 
         .swal2-popup { border-radius: 15px !important; }
     </style>
@@ -108,7 +95,7 @@
 
         <div class="scan-area">
             <input type="number" id="qtd_input" class="input-qtd" value="1" min="1">
-            <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe, ou 2 toques p/ nome..." onchange="buscarProduto(this.value)" ondblclick="abrirBuscaNome()">
+            <input type="text" id="codigo_barras" class="input-codigo" placeholder="Bipe ou digite o EAN..." onchange="buscarProduto(this.value)">
             <button class="btn-scan" onclick="ligarScanner()">📸</button>
         </div>
 
@@ -169,126 +156,58 @@
         async function ligarScanner() {
             const camBox = document.getElementById('camera-box');
             if (html5QrCode && html5QrCode.isScanning) return;
-
-            camBox.style.display = 'block';
-            document.getElementById('btn-flash').innerText = '🔦 FLASH';
-            isFlashOn = false;
-
+            camBox.style.display = 'block'; document.getElementById('btn-flash').innerText = '🔦 FLASH'; isFlashOn = false;
             html5QrCode = new Html5Qrcode("reader");
-
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 15, qrbox: { width: 250, height: 150 } }, 
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } }, 
                     (decodedText) => {
                         if (navigator.vibrate) navigator.vibrate(100);
-                        desligarScanner();
-                        document.getElementById('codigo_barras').value = decodedText;
-                        buscarProduto(decodedText);
-                    }, 
-                    (errorMessage) => {}
+                        desligarScanner(); document.getElementById('codigo_barras').value = decodedText; buscarProduto(decodedText);
+                    }, () => {}
                 );
-            } catch (err) {
-                console.error("Erro", err);
-                desligarScanner();
-                Swal.fire('Erro', 'Não foi possível acessar a câmera traseira.', 'error');
-            }
+            } catch (err) { desligarScanner(); Swal.fire('Erro', 'Não foi possível acessar a câmera traseira.', 'error'); }
         }
 
-        async function desligarScanner() {
-            if (html5QrCode) {
-                try {
-                    if (html5QrCode.isScanning) await html5QrCode.stop();
-                    html5QrCode.clear();
-                } catch(e) {}
-            }
-            document.getElementById('camera-box').style.display = 'none';
-        }
-
+        async function desligarScanner() { if (html5QrCode && html5QrCode.isScanning) { await html5QrCode.stop(); html5QrCode.clear(); } document.getElementById('camera-box').style.display = 'none'; }
         async function toggleFlash() {
             if (html5QrCode && html5QrCode.isScanning) {
-                try {
-                    isFlashOn = !isFlashOn;
-                    await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isFlashOn }] });
-                    document.getElementById('btn-flash').innerText = isFlashOn ? '🔦 DESLIGAR' : '🔦 FLASH';
-                } catch (e) {
-                    isFlashOn = !isFlashOn;
-                    Swal.fire({toast:true, position:'top-end', icon:'error', title:'Flash não suportado neste aparelho', showConfirmButton:false, timer:2000});
-                }
+                try { isFlashOn = !isFlashOn; await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isFlashOn }] }); document.getElementById('btn-flash').innerText = isFlashOn ? '🔦 DESLIGAR' : '🔦 FLASH'; } 
+                catch (e) { isFlashOn = !isFlashOn; Swal.fire({toast:true, position:'top-end', icon:'error', title:'Flash não suportado neste aparelho', showConfirmButton:false, timer:2000}); }
             }
         }
 
-        // --- BUSCA POR NOME ---
-        function abrirBuscaNome() {
-            Swal.fire({
-                title: 'Buscar Produto',
-                html: `
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-                        <input type="text" id="input-busca-nome" placeholder="Digite o nome..." onkeyup="pesquisarPorNome(this.value)" autocomplete="off" style="width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; box-sizing: border-box; outline: none;">
-                        <div id="resultado-busca" style="max-height: 40vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; text-align: left; background: #f8fafc;">
-                            <div style="padding: 15px; color: #64748b; text-align: center; font-size: 0.95rem;">Digite pelo menos 3 letras...</div>
-                        </div>
-                    </div>
-                `,
-                showConfirmButton: false,
-                showCloseButton: true,
-                padding: '1em',
-                didOpen: () => {
-                    setTimeout(() => document.getElementById('input-busca-nome').focus(), 100);
-                }
-            });
-        }
-
-        window.pesquisarPorNome = async function(termo) {
-            const divResultado = document.getElementById('resultado-busca');
-            if (!termo || termo.length < 3) {
-                divResultado.innerHTML = '<div style="padding: 15px; color: #64748b; text-align: center; font-size: 0.95rem;">Digite pelo menos 3 letras...</div>';
-                return;
-            }
-
-            try {
-                const { data, error } = await tabela_supabase
-                    .from('produtos')
-                    .select('codigo_barras, nome_produto, preco_venda')
-                    .ilike('nome_produto', `%${termo}%`)
-                    .limit(15);
-
-                if (error) throw error;
-
-                if (data.length === 0) {
-                    divResultado.innerHTML = '<div style="padding: 15px; color: #dc2626; text-align: center; font-weight: bold;">Nenhum produto encontrado.</div>';
-                    return;
-                }
-
-                divResultado.innerHTML = data.map(p => `
-                    <div class="search-result-item" onclick="selecionarProdutoBusca('${p.codigo_barras}')">
-                        <div>
-                            <div class="sri-nome">${p.nome_produto}</div>
-                            <div class="sri-ean">EAN: ${p.codigo_barras}</div>
-                        </div>
-                        <div class="sri-preco">R$ ${p.preco_venda.toFixed(2).replace('.', ',')}</div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error(err);
-            }
-        };
-
-        window.selecionarProdutoBusca = function(ean) {
-            Swal.close(); 
-            document.getElementById('codigo_barras').value = ean; 
-            buscarProduto(ean); 
-        };
-
-        // --- CARRINHO ---
+        // --- CARRINHO COM SUPORTE A PESO ---
         async function buscarProduto(ean) {
             if (!ean) return;
             const qtdInput = parseInt(document.getElementById('qtd_input').value) || 1;
             document.getElementById('codigo_barras').value = ""; 
             try {
-                const { data: prod } = await tabela_supabase.from('produtos').select(`id, nome_produto, preco_venda, estoque_minimo, prateleira_fisica ( quantidade )`).eq('codigo_barras', ean).maybeSingle();
+                // Modificado: Agora seleciona a coluna 'vendido_por_peso' também
+                const { data: prod } = await tabela_supabase.from('produtos').select(`id, nome_produto, preco_venda, vendido_por_peso, estoque_minimo`).eq('codigo_barras', ean).maybeSingle();
+                
                 if (prod) {
-                    adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, qtdInput);
+                    if (prod.vendido_por_peso) {
+                        // É produto de peso! Pede os gramas na hora.
+                        const { value: gramas } = await Swal.fire({
+                            title: 'Produto Pesável ⚖️',
+                            text: `Informe o peso em Gramas (g) para: ${prod.nome_produto}`,
+                            input: 'number',
+                            inputAttributes: { min: 1, step: 1 },
+                            inputPlaceholder: 'Ex: 850',
+                            showCancelButton: true,
+                            confirmButtonText: 'Adicionar',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#2563eb'
+                        });
+
+                        if (gramas && gramas > 0) {
+                            const pesoKg = parseFloat(gramas) / 1000;
+                            adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, pesoKg, true);
+                        }
+                    } else {
+                        // Produto normal de unidade
+                        adicionarAoCarrinho(prod.id, prod.nome_produto, prod.preco_venda, qtdInput, false);
+                    }
                     document.getElementById('qtd_input').value = "1"; 
                 } else {
                     Swal.fire('Não Encontrado', 'Produto não cadastrado.', 'error');
@@ -296,10 +215,14 @@
             } catch (err) { console.error(err); }
         }
 
-        function adicionarAoCarrinho(id, nome, preco, qtdAdicionar) {
+        function adicionarAoCarrinho(id, nome, preco, qtdAdicionar, isPeso) {
+            // Se for unidade, empilha. Se for peso, empilha ou cria nova linha? Empilhar somando os pesos é melhor.
             const index = carrinho.findIndex(item => item.id === id);
-            if (index > -1) carrinho[index].quantidade += qtdAdicionar;
-            else carrinho.push({ id, nome, preco, quantidade: qtdAdicionar });
+            if (index > -1 && carrinho[index].isPeso === isPeso) {
+                carrinho[index].quantidade += qtdAdicionar;
+            } else {
+                carrinho.push({ id, nome, preco, quantidade: qtdAdicionar, isPeso });
+            }
             atualizarInterface();
             if (navigator.vibrate) navigator.vibrate(100); 
         }
@@ -312,6 +235,27 @@
             atualizarInterface();
         }
 
+        window.editarPeso = async function(index) {
+            const item = carrinho[index];
+            const { value: gramas } = await Swal.fire({
+                title: 'Editar Peso ⚖️',
+                text: `Altere o peso em Gramas (g) para: ${item.nome}`,
+                input: 'number',
+                inputValue: (item.quantidade * 1000).toFixed(0),
+                inputAttributes: { min: 1, step: 1 },
+                showCancelButton: true,
+                confirmButtonText: 'Atualizar',
+                confirmButtonColor: '#2563eb'
+            });
+
+            if (gramas && gramas > 0) {
+                carrinho[index].quantidade = parseFloat(gramas) / 1000;
+                atualizarInterface();
+            } else if (gramas === "0") {
+                removerItemTotal(index);
+            }
+        };
+
         function formatarValor(val) { return "R$ " + val.toFixed(2).replace('.', ','); }
 
         function atualizarInterface() {
@@ -322,17 +266,28 @@
                 document.getElementById('display-total').innerText = "R$ 0,00";
                 return;
             }
+            
             lista.innerHTML = carrinho.map((item, index) => {
                 const subtotal = item.quantidade * item.preco;
                 totalCarrinhoBruto += subtotal;
+                
+                // Layout Inteligente: Exibe (Kg) ou (Un)
+                const descPreco = item.isPeso ? `Kg: ${formatarValor(item.preco)}` : `Un: ${formatarValor(item.preco)}`;
+                
+                // Botão de Controle (Peso ou Unidade)
+                const displayQtd = item.isPeso ? `${(item.quantidade * 1000).toFixed(0)}g` : `${item.quantidade}`;
+                const btnControle = item.isPeso 
+                    ? `<button class="btn-qty" style="width: auto; padding: 0 10px; font-size: 0.9rem;" onclick="window.editarPeso(${index})">⚖️ ${displayQtd}</button>`
+                    : `<button class="btn-qty" onclick="alterarQtd(${index}, -1)">-</button><span class="qty-display">${item.quantidade}</span><button class="btn-qty" onclick="alterarQtd(${index}, 1)">+</button>`;
+
                 return `
                     <div class="item-carrinho">
                         <div class="item-info-group">
                             <button class="btn-excluir" onclick="removerItemTotal(${index})">✖</button>
-                            <div><div class="item-nome">${item.nome}</div><div class="item-preco">Un: ${formatarValor(item.preco)}</div></div>
+                            <div><div class="item-nome">${item.nome} ${item.isPeso ? '⚖️' : ''}</div><div class="item-preco">${descPreco}</div></div>
                         </div>
                         <div class="item-acoes">
-                            <div class="qty-control"><button class="btn-qty" onclick="alterarQtd(${index}, -1)">-</button><span class="qty-display">${item.quantidade}</span><button class="btn-qty" onclick="alterarQtd(${index}, 1)">+</button></div>
+                            <div class="qty-control">${btnControle}</div>
                             <span style="font-weight: 900; font-size: 1.1rem; color: var(--text);">${formatarValor(subtotal)}</span>
                         </div>
                     </div>
@@ -341,8 +296,7 @@
             document.getElementById('display-total').innerText = formatarValor(totalCarrinhoBruto);
         }
 
-        // --- SISTEMA DE CHECKOUT INTELIGENTE ---
-        
+        // --- CHECKOUT SEGURO ---
         window.parseMoeda = function(texto) { 
             if (!texto) return 0;
             let val = texto.toString().replace('R$', '').trim().replace(/\./g, "").replace(",", ".");
@@ -371,36 +325,23 @@
             btn.classList.toggle('active');
 
             if (btn.classList.contains('active')) {
-                row.style.display = 'flex'; // Mostra o campo
-                
-                // Calcula o quanto falta para bater a meta e preenche sozinho!
+                row.style.display = 'flex'; 
                 let total = window.parseMoeda(document.getElementById('chk_total_final').innerText);
                 let sumOther = window.getSumActive();
                 let rem = total - sumOther;
-                
-                if (rem > 0 && input.value === "") {
-                    input.value = rem.toFixed(2).replace('.', ',');
-                    window.formatarMoedaCheckout(input); // Aplica a máscara
-                }
+                if (rem > 0 && input.value === "") { input.value = rem.toFixed(2).replace('.', ','); window.formatarMoedaCheckout(input); }
             } else {
-                row.style.display = 'none'; // Esconde o campo
-                input.value = "";           // Zera o valor
+                row.style.display = 'none'; input.value = "";           
             }
-
             window.recalcularCheckout();
         }
 
         window.recalcularCheckout = function() {
             let valDesconto = window.parseMoeda(document.getElementById('chk_desconto').value);
-            if (valDesconto > totalCarrinhoBruto) {
-                valDesconto = totalCarrinhoBruto;
-                document.getElementById('chk_desconto').value = formatarValor(valDesconto).replace('R$ ', '');
-            }
-
+            if (valDesconto > totalCarrinhoBruto) { valDesconto = totalCarrinhoBruto; document.getElementById('chk_desconto').value = formatarValor(valDesconto).replace('R$ ', ''); }
             const totalComDesconto = totalCarrinhoBruto - valDesconto;
             document.getElementById('chk_total_final').innerText = formatarValor(totalComDesconto);
 
-            // Só considera o valor se o botão estiver ativado
             const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active');
             const isPixAtivo = document.getElementById('btn-pix').classList.contains('active');
             const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
@@ -411,22 +352,17 @@
             
             const totalRecebido = valDinheiro + valPix + valCartao;
             const diferenca = totalRecebido - totalComDesconto;
-            
             const statusBox = document.getElementById('chk_status');
             const btnConfirm = Swal.getConfirmButton();
 
-            // QRCode PIX dinâmico
             const qrContainer = document.getElementById('box-qr-pix');
             if (isPixAtivo && valPix > 0 && configPix.chave !== "") {
                 const copiaEcola = gerarCopiaEColaPix(valPix);
                 document.getElementById('img-qr-pix').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(copiaEcola)}`;
                 document.getElementById('txt-pix-copia').innerText = copiaEcola;
                 qrContainer.style.display = 'block';
-            } else {
-                qrContainer.style.display = 'none';
-            }
+            } else { qrContainer.style.display = 'none'; }
 
-            // Lógica do Status (Semáforo)
             if (!isDinAtivo && !isPixAtivo && !isCarAtivo) {
                 statusBox.className = 'mc-status aguardando'; statusBox.innerText = 'Toque em como o cliente vai pagar 👆'; btnConfirm.disabled = true;
             } else if (totalRecebido === 0) {
@@ -434,11 +370,8 @@
             } else if (diferenca < -0.01) {
                 statusBox.className = 'mc-status falta'; statusBox.innerText = `Falta: ${formatarValor(Math.abs(diferenca))}`; btnConfirm.disabled = true;
             } else if (diferenca > 0.01) {
-                if (isDinAtivo && valDinheiro > 0) {
-                    statusBox.className = 'mc-status troco'; statusBox.innerText = `Troco: ${formatarValor(diferenca)}`; btnConfirm.disabled = false;
-                } else {
-                    statusBox.className = 'mc-status falta'; statusBox.innerText = `Valor acima (Sem dinheiro p/ troco)`; btnConfirm.disabled = true;
-                }
+                if (isDinAtivo && valDinheiro > 0) { statusBox.className = 'mc-status troco'; statusBox.innerText = `Troco: ${formatarValor(diferenca)}`; btnConfirm.disabled = false; } 
+                else { statusBox.className = 'mc-status falta'; statusBox.innerText = `Valor acima (Sem dinheiro p/ troco)`; btnConfirm.disabled = true; }
             } else {
                 statusBox.className = 'mc-status ok'; statusBox.innerText = 'Valor Exato ✔️'; btnConfirm.disabled = false;
             }
@@ -494,7 +427,6 @@
                 title: 'Pagamento', html: htmlCheckout, showCancelButton: true, confirmButtonText: '✔️ CONFIRMAR VENDA', cancelButtonText: 'Voltar', confirmButtonColor: '#16a34a',
                 didOpen: () => { Swal.getConfirmButton().disabled = true; },
                 preConfirm: () => {
-                    // Só puxa o valor se o botão estiver aceso
                     const isDinAtivo = document.getElementById('btn-dinheiro').classList.contains('active');
                     const isPixAtivo = document.getElementById('btn-pix').classList.contains('active');
                     const isCarAtivo = document.getElementById('btn-cartao').classList.contains('active');
@@ -515,17 +447,11 @@
             Swal.fire({ title: 'Processando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
             try {
-                const vDesc = pagamento.desc;
-                const vDin = pagamento.din;
-                const vPix = pagamento.pix;
-                const vCar = pagamento.car;
-                
+                const vDesc = pagamento.desc; const vDin = pagamento.din; const vPix = pagamento.pix; const vCar = pagamento.car;
                 const totalComDesconto = totalCarrinhoBruto - vDesc;
                 
                 let formas = [];
-                if (vDin > 0) formas.push('DINHEIRO');
-                if (vPix > 0) formas.push('PIX');
-                if (vCar > 0) formas.push('CARTÃO');
+                if (vDin > 0) formas.push('DINHEIRO'); if (vPix > 0) formas.push('PIX'); if (vCar > 0) formas.push('CARTÃO');
                 const formaPrincipal = formas.length > 1 ? 'MISTO' : (formas[0] || 'DINHEIRO');
 
                 let dinheiroRealRecebido = vDin;
@@ -537,7 +463,6 @@
                 const { data: novaVenda, error: errVenda } = await tabela_supabase.from('vendas').insert([{ 
                     valor_total: totalComDesconto, forma_pagamento: formaPrincipal, desconto: vDesc, pgto_dinheiro: dinheiroRealRecebido, pgto_pix: vPix, pgto_cartao: vCar
                 }]).select().single();
-                
                 if (errVenda) throw errVenda;
 
                 for (const item of carrinho) {
@@ -573,20 +498,12 @@
         async function mostrarResumoCaixa() {
             Swal.fire({ title: 'Calculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             try {
-                const hoje = new Date();
-                const start = new Date(hoje.setHours(0,0,0,0)).toISOString();
-                const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
-
+                const hoje = new Date(); const start = new Date(hoje.setHours(0,0,0,0)).toISOString(); const end = new Date(hoje.setHours(23,59,59,999)).toISOString();
                 const { data: vendasDia, error } = await tabela_supabase.from('vendas').select('valor_total, pgto_dinheiro, pgto_pix, pgto_cartao').gte('data_venda', start).lte('data_venda', end);
                 if (error) throw error;
 
                 let totais = { PIX: 0, DINHEIRO: 0, CARTAO: 0, TOTAL: 0 };
-                vendasDia.forEach(v => {
-                    totais.TOTAL += v.valor_total;
-                    totais.DINHEIRO += parseFloat(v.pgto_dinheiro) || 0;
-                    totais.PIX += parseFloat(v.pgto_pix) || 0;
-                    totais.CARTAO += parseFloat(v.pgto_cartao) || 0;
-                });
+                vendasDia.forEach(v => { totais.TOTAL += v.valor_total; totais.DINHEIRO += parseFloat(v.pgto_dinheiro) || 0; totais.PIX += parseFloat(v.pgto_pix) || 0; totais.CARTAO += parseFloat(v.pgto_cartao) || 0; });
 
                 const relatorioHTML = `
                     <div style="text-align: left; font-size: 1.1rem; padding: 10px;">
@@ -594,8 +511,7 @@
                         <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🟡 <b>Dinheiro:</b> ${formatarValor(totais.DINHEIRO)}</p>
                         <p style="border-bottom: 1px solid #e2e8f0; padding: 10px 0 5px;">🔵 <b>Cartão:</b> ${formatarValor(totais.CARTAO)}</p>
                         <h3 style="margin-top: 15px; color: var(--primary); text-align: center;">Faturamento Líquido: <br> ${formatarValor(totais.TOTAL)}</h3>
-                    </div>
-                `;
+                    </div>`;
                 Swal.fire({ title: 'Caixa de Hoje', html: relatorioHTML, confirmButtonText: 'Fechar', confirmButtonColor: '#475569' });
             } catch(err) { Swal.fire('Erro', 'Não foi possível calcular o caixa.', 'error'); }
         }
